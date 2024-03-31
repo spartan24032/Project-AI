@@ -41,31 +41,47 @@ class GridWorld:
         """
         current_state, has_item = agent.get_state()
         x, y = current_state
-        reward = -0.1  # Default action cost
+        reward = -1  # Default action cost
 
         # Handling movement actions
-        if action == 'N' and x > 0: x -= 1
-        elif action == 'S' and x < self.size - 1: x += 1
-        elif action == 'E' and y < self.size - 1: y += 1
-        elif action == 'W' and y > 0: y -= 1
-        elif action in ['pickup', 'dropoff']:
-            reward = -1 # Apply penalty if 'pickup' or 'dropoff' is unnecessary
-
-        new_state = (x, y)
-
-        if action == 'pickup' and current_state in self.pickups and not has_item:
+        if action == 'N': x -= 1
+        elif action == 'S': x += 1
+        elif action == 'E': y += 1
+        elif action == 'W': y -= 1
+        elif action == 'pickup':
             agent.update_state(current_state, True)
-            reward = 1  # Reward for valid pickup
-        if action == 'dropoff' and agent.get_state()[0] in self.dropoffs and agent.get_state()[1]:
+            reward = 13
+        elif action == 'dropoff':
             self.used_dropoffs.add(agent.get_state()[0])
             agent.update_state(current_state, False)
-            reward = 10  # Reward for valid dropoff
+            reward = 13
+
+        new_state = (x, y)
 
         # If movement action, update agent's position
         if action in ['N', 'S', 'E', 'W']:
             agent.update_state(new_state, has_item)
 
         return (agent.get_state()[0], agent.get_state()[1]), reward
+
+    def valid_actions(self, agent_state):
+        state, has_item = agent_state
+        x, y = state
+        actions = []
+        
+        # Add movement actions based on map boundaries
+        if x > 0: actions.append('N')
+        if y < self.size - 1: actions.append('E')
+        if x < self.size - 1: actions.append('S')
+        if y > 0: actions.append('W')
+            
+        # Determine if pickup or dropoff actions are valid
+        if (x, y) in self.pickups and not has_item:
+            actions.append('pickup')
+        if (x, y) in self.dropoffs and has_item:
+            actions.append('dropoff')
+
+        return actions
 
     def render(self, agents):
         """
@@ -82,13 +98,13 @@ class GridWorld:
             display_grid[pickup] = 'P'
         for dropoff in self.dropoffs:
             display_grid[dropoff] = 'D'
-    
+            
         # Overlay agents on the grid
         for agent in agents:
             state, has_item = agent.get_state()
             agent_mark = 'C' if has_item else 'A'
             display_grid[state] = agent_mark
-    
+            
         # Print the grid
         print("+---" * self.size + "+")
         for row in display_grid:
