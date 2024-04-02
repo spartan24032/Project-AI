@@ -11,7 +11,8 @@ def run_simulation(agents, env, episodes=200):
             agent.reset()
             
         # use verbose to control which episodes get output
-        verbose = episode in [0, episodes - 1]  # Verbose output for the first and last episode
+        # [0, episodes - 1] to see the first and last.
+        verbose = episode in [episodes - 1]  # Verbose output for the first and last episode
                                                 # This can be changed to output none or some episodes if needed
         if verbose:
             print(f"--- Episode {episode + 1} ---")
@@ -36,13 +37,13 @@ def run_simulation(agents, env, episodes=200):
                 agent.update_q_values(old_state, old_has_item, action, reward, state, has_item)
     
                 if verbose:
-                    print(f"Action: {action}), Reward: {reward}")
+                    print(f"Action: {action}, Reward: {reward}")
                     env.render(agents)
                     
                 if env.dropoffs_complete():
                     if verbose:
                         print(f"Items successfully dropped off at step {i}. Resetting environment.\n")
-                    break;
+                    break
 
         if verbose:
             print(f"Total Reward for Episode {episode + 1}: {total_reward}\n")
@@ -50,11 +51,12 @@ def run_simulation(agents, env, episodes=200):
 
 if __name__ == "__main__":
     # Define the environment
-    size = 5
-    pickups = [(2, 2)]
-    dropoffs = [(4, 4)]
+    dropoffCapacity = 5
+    size = 6
+    pickups =  {(2, 2): dropoffCapacity}  # coordinate, starting capacity
+    dropoffs = {(5,5): 0} # coordiante, starting inventory
     
-    env = GridWorld(size, pickups, dropoffs)
+    env = GridWorld(size, pickups, dropoffs, dropoffCapacity)
     
     a = env.actions
     agents = [ 
