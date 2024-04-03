@@ -19,6 +19,15 @@ class GridWorld:
     def dropoffs_complete(self):
         return all(capacity == self.dropoffStorage for capacity in self.dropoffs.values())
 
+    def generate_pd_string(self, usage=False):
+        if usage:
+            # Generates binary string-- 1 = available pickup/dropoff, 0 = unavailable
+            pickups_str = ''.join('1' if capacity > 0 else '0' for capacity in self.pickups.values())
+            dropoffs_str = ''.join('1' if count < self.dropoffStorage else '0' for count in self.dropoffs.values())
+            return pickups_str + dropoffs_str
+        else:
+            return 5
+
     def reset(self):
         """
         Resets the environment for a new episode. 

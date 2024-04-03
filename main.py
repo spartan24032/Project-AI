@@ -10,21 +10,24 @@ if __name__ == "__main__":
     random.seed(5)
     dropoffCapacity = 5
     size = 5
-    pickups =  {
-        (4,1): dropoffCapacity, (1,3): dropoffCapacity, #(0,4): dropoffCapacity
-                }  # {(coordinate): starting capacity}
-    dropoffs = {
-        (0,0): 0, (2,0): 0, #(3,4): 0
-    } # {(coordiante): starting inventory}
+    pickups = {  # {(coordinate): starting capacity}
+        (4,1): dropoffCapacity, #(1,3): dropoffCapacity, (0,4): dropoffCapacity
+                }
+    dropoffs = {  # {(coordinate): starting inventory}
+        (0,0): 0, #(2,0): 0, (3,4): 0
+    }
     
     env = GridWorld(size, pickups, dropoffs, dropoffCapacity)
-    
+
+    # Create the agents
+    complex_world2 = False  # This uses a different state for each config of dropoff and pickup.
+                            # It is great at finding the optimal policy, but uses 64x memory.
     a = env.actions
     agents = [
         # alpha = learning rate , gamma = discount factor
         Agent(a, start_state=(2,2), policy = PExploit, alpha=0.3, gamma=0.5),
-        Agent(a, start_state=(1,1), policy = PRandom, alpha=0.5, gamma=0.3),
+        #Agent(a, start_state=(1,1), policy = PExploit, alpha=0.5, gamma=0.3),
         #Agent(a, start_state=(4,4), policy=PExploit, alpha=0.3, gamma=0.5)
     ]
 
-    run_simulation(agents, env, episodes=1000)
+    run_simulation(agents, env, complex_world2, episodes=200)
