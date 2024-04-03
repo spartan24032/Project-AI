@@ -138,7 +138,7 @@ class GridWorld:
                         break
                 if agent_here:
                     if base_content.strip():  # If pickup/dropoff
-                        cell_content = BLUE + f"{base_content[5]}" + RED + f"{agent_mark}" + ENDC + '  ' # Combine P/D with A/C
+                        cell_content = BLUE + f"{base_content[5]}{base_content[6]}" + RED + f"{agent_mark}{agent_id}" + ENDC  # Combine P/D with A/C
                     else:
                         cell_content = RED + f"{agent_mark}{agent_id}" + ENDC + '  ' # Display agent with ID
                 else:
