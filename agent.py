@@ -40,10 +40,9 @@ class Agent:
         return self.policy(self.state, self.has_item, self.Q, valid_actions)
 
     def display_q_values(self):
-        print("Current Q-values:")
+        print("  Q-values:")
         for action in self.actions:
             q_value = self.Q.get((self.state, self.has_item, action))
-            display_value = " " if q_value is None else f"{q_value:.2f}"
-            print(f"  {action}: {display_value}")
-        print()
+            display_value = "--" if q_value is None else f"{q_value:.2f}"
+            print(f"    {action}: {display_value}")
 

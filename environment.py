@@ -93,10 +93,9 @@ class GridWorld:
 
     def render(self, agents):
         """
-        P = Pickup point
-        D = Dropoff point
-        A = Agent
-        C = Agent (carrying)
+        P/D # = pickup/dropoff, capacity of that location
+        A# = Agent, Agent ID
+        C# = Agent (carrying), Agent ID
         """
         # ANSI escape codes for colors
         RED = '\033[91m'
@@ -117,13 +116,11 @@ class GridWorld:
             display_grid[state] = agent_mark
 
         # Print the grid
-        print("+----" * self.size + "+")  # Correctly add horizontal lines
+        print("+----" * self.size + "+")
         for x in range(self.size):
             row_str = ""
             for y in range(self.size):
-                # Initialize cell as empty
                 cell_content = "    "
-                # Determine if the cell is a pickup or dropoff
                 base_content = ''
                 if (x, y) in self.pickups:
                     base_content = BLUE + 'P' + str(self.pickups[(x, y)]) + ENDC + '  '
@@ -131,7 +128,6 @@ class GridWorld:
                     base_content = BLUE + 'D' + str(self.dropoffs[(x, y)]) + ENDC + '  '
                 else:
                     base_content = '    '
-                # Check for agent in this cell
                 agent_here = False
                 for idx, agent in enumerate(agents):
                     agent_state, has_item = agent.get_state()
@@ -146,7 +142,7 @@ class GridWorld:
                     else:
                         cell_content = RED + f"{agent_mark}{agent_id}" + ENDC + '  ' # Display agent with ID
                 else:
-                    cell_content = base_content  # No agent, just show the location status
+                    cell_content = base_content
                 row_str += f"|{cell_content:4}"  # Build the row string
             print(row_str + "|")
             print("+----" * self.size + "+")
