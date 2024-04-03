@@ -24,16 +24,17 @@ class Agent:
 
     def update_q_values(self, state, has_item, action, valid_actions, reward, next_state, next_has_item):
         # Assemble the current state and action into a tuple
-        current_q = self.Q.get((state, has_item, action), 0.0)
-        # Find the max Q-value for the next state across all possible actions
-        next_max_q = max([self.Q.get((next_state, next_has_item, a), 0.0) for a in valid_actions])
-        # Calculate the new Q-value using the Q-learning formula
-        new_q = current_q + self.alpha * (reward + self.gamma * next_max_q - current_q)
-        #print(f"Current Q: {current_q}")
-        #print(f"max Q: {next_max_q}")
-        #print(f"New Q-value for {state}, {has_item}, {action}: {new_q:.2f}")
-        # Update the Q-value for the current state and action
+        current_q = self.Q.get((state, has_item, action))
+        # Find the max Q-value for the NEXT state across all FUTURE possible actions
+        q_values_next = [self.Q.get((next_state, next_has_item, a)) for a in valid_actions if (next_state, next_has_item, a) in self.Q]
+        next_max_q = max(q_values_next) if q_values_next else -1.0
+
+        if current_q is None:
+            new_q = reward  # or some initialization logic
+        else:
+            new_q = current_q + self.alpha * (reward + self.gamma * next_max_q - current_q)
         self.Q[(state, has_item, action)] = new_q
+
 
     def choose_action(self, valid_actions):
         return self.policy(self.state, self.has_item, self.Q, valid_actions)
@@ -41,5 +42,8 @@ class Agent:
     def display_q_values(self):
         print("Current Q-values:")
         for action in self.actions:
-            print(f"  {action}: {self.Q.get((self.state, self.has_item, action), 0.0):.2f}")
+            q_value = self.Q.get((self.state, self.has_item, action))
+            display_value = " " if q_value is None else f"{q_value:.2f}"
+            print(f"  {action}: {display_value}")
         print()
+
