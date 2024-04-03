@@ -26,7 +26,7 @@ class Agent:
         # Assemble the current state and action into a tuple
         current_q = self.Q.get((state, has_item, action), 0.0)
         # Find the max Q-value for the next state across all possible actions
-        next_max_q = max([self.Q.get((next_state, next_has_item, a), 0.0) for a in valid_actions])
+        next_max_q = max([self.Q.get((next_state, next_has_item, a), 0.0) for a in self.actions])
         # Calculate the new Q-value using the Q-learning formula
         new_q = current_q + self.alpha * (reward + self.gamma * next_max_q - current_q)
         # Update the Q-value for the current state and action

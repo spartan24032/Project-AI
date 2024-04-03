@@ -66,7 +66,7 @@ class GridWorld:
         if action in ['N', 'S', 'E', 'W']:
             agent.update_state(new_state, has_item)
 
-        return (agent.get_state()[0], agent.get_state()[1]), reward
+        return reward
 
     def valid_actions(self, agent_state, agents):
         state, has_item = agent_state
@@ -74,8 +74,7 @@ class GridWorld:
         actions = []
 
         occupied_positions = [
-            (agent.get_state()[0], agent.get_state()[1])
-            for agent in agents if agent.get_state() != state
+            (agent.get_state()[0]) for agent in agents if agent.get_state()[0] != state
         ]
 
         # Check movement actions
@@ -84,7 +83,7 @@ class GridWorld:
         if x < self.size - 1 and (x + 1, y) not in occupied_positions: actions.append('S')
         if y > 0 and (x, y - 1) not in occupied_positions: actions.append('W')
 
-        # pickup and dropoff
+        # Checks for pickup and dropoff remain unchanged
         if (x, y) in self.pickups and not has_item and self.pickups[(x, y)] > 0:
             actions.append('pickup')
         if (x, y) in self.dropoffs and has_item and self.dropoffs[(x, y)] < self.dropoffStorage:
