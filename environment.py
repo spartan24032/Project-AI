@@ -22,7 +22,7 @@ class GridWorld:
     def reset(self):
         """
         Resets the environment for a new episode. 
-        This includes resetting pickup and dropoff locations
+        This includes resetting pickup and dropoff locations + capacaties
         """
         # Reset the grid
         self.grid = np.zeros((self.size, self.size), dtype=str)
@@ -38,10 +38,6 @@ class GridWorld:
     def step(self, agent, action):
         """
         Applies an action taken by an agent and updates environment state
-
-        Parameters:
-        - agent: The agent taking the action.
-        - action: The action being taken by the agent.
 
         Returns:
         - reward: The reward resulting from the action.
@@ -97,10 +93,13 @@ class GridWorld:
         D = Dropoff point
         A = Agent
         C = Agent (carrying)
-        TODO: distinguish agents by index, show capacity (0/5) for pickup and dropoff
         """
+        # ANSI escape codes for colors
+        RED = '\033[91m'
+        BLUE = '\033[94m'
+        ENDC = '\033[0m'  # Resets color to default
+
         display_grid = np.full((self.size, self.size), fill_value=' ')
-    
         # Mark pickups and dropoffs on the display grid
         for pickup in self.pickups:
             display_grid[pickup] = 'P'
@@ -112,7 +111,7 @@ class GridWorld:
             state, has_item = agent.get_state()
             agent_mark = 'C' if has_item else 'A'
             display_grid[state] = agent_mark
-            
+
         # Print the grid
         print("+----" * self.size + "+")  # Correctly add horizontal lines
         for x in range(self.size):
@@ -123,9 +122,9 @@ class GridWorld:
                 # Determine if the cell is a pickup or dropoff
                 base_content = ''
                 if (x, y) in self.pickups:
-                    base_content = 'P' + str(self.pickups[(x, y)])
+                    base_content = BLUE + 'P' + str(self.pickups[(x, y)]) + ENDC + '  '
                 elif (x, y) in self.dropoffs:
-                    base_content = 'D' + str(self.dropoffs[(x, y)])
+                    base_content = BLUE + 'D' + str(self.dropoffs[(x, y)]) + ENDC + '  '
                 else:
                     base_content = '    '
                 # Check for agent in this cell
@@ -139,9 +138,9 @@ class GridWorld:
                         break
                 if agent_here:
                     if base_content.strip():  # If pickup/dropoff
-                        cell_content = f"{base_content[0]}{agent_mark}"  # Combine P/D with A/C
+                        cell_content = BLUE + f"{base_content[5]}" + RED + f"{agent_mark}" + ENDC + '  ' # Combine P/D with A/C
                     else:
-                        cell_content = f"{agent_mark}{agent_id}"  # Display agent with ID
+                        cell_content = RED + f"{agent_mark}{agent_id}" + ENDC + '  ' # Display agent with ID
                 else:
                     cell_content = base_content  # No agent, just show the location status
                 row_str += f"|{cell_content:4}"  # Build the row string
