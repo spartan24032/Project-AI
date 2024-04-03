@@ -68,18 +68,23 @@ class GridWorld:
 
         return (agent.get_state()[0], agent.get_state()[1]), reward
 
-    def valid_actions(self, agent_state):
+    def valid_actions(self, agent_state, agents):
         state, has_item = agent_state
         x, y = state
         actions = []
-        
-        # Add movement actions based on map boundaries
-        if x > 0: actions.append('N')
-        if y < self.size - 1: actions.append('E')
-        if x < self.size - 1: actions.append('S')
-        if y > 0: actions.append('W')
-            
-        # Determine if pickup or dropoff actions are valid
+
+        occupied_positions = [
+            (agent.get_state()[0], agent.get_state()[1])
+            for agent in agents if agent.get_state() != state
+        ]
+
+        # Check movement actions
+        if x > 0 and (x - 1, y) not in occupied_positions: actions.append('N')
+        if y < self.size - 1 and (x, y + 1) not in occupied_positions: actions.append('E')
+        if x < self.size - 1 and (x + 1, y) not in occupied_positions: actions.append('S')
+        if y > 0 and (x, y - 1) not in occupied_positions: actions.append('W')
+
+        # pickup and dropoff
         if (x, y) in self.pickups and not has_item and self.pickups[(x, y)] > 0:
             actions.append('pickup')
         if (x, y) in self.dropoffs and has_item and self.dropoffs[(x, y)] < self.dropoffStorage:

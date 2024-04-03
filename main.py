@@ -31,7 +31,7 @@ def run_simulation(agents, env, episodes=300):
 
             for idx, agent in enumerate(agents):
                 old_state, old_has_item = agent.get_state()
-                valid_actions = env.valid_actions(agent.get_state())
+                valid_actions = env.valid_actions(agent.get_state(), agents)
                 action = agent.choose_action(valid_actions)
                 (state, has_item), reward = env.step(agent, action)
                 total_reward += reward
