@@ -2,7 +2,7 @@
 import random
 
 class Agent:
-    def __init__(self, actions, start_state, policy, alpha=0.1, gamma=0.9):
+    def __init__(self, actions, start_state, policy, alpha=0.5, gamma=0.5):
         self.Q = {}  # Initialize Q-values dictionary
         self.alpha = alpha  # Learning rate
         self.gamma = gamma  # Discount factor
@@ -26,9 +26,12 @@ class Agent:
         # Assemble the current state and action into a tuple
         current_q = self.Q.get((state, has_item, action), 0.0)
         # Find the max Q-value for the next state across all possible actions
-        next_max_q = max([self.Q.get((next_state, next_has_item, a), 0.0) for a in self.actions])
+        next_max_q = max([self.Q.get((next_state, next_has_item, a), 0.0) for a in valid_actions])
         # Calculate the new Q-value using the Q-learning formula
         new_q = current_q + self.alpha * (reward + self.gamma * next_max_q - current_q)
+        #print(f"Current Q: {current_q}")
+        #print(f"max Q: {next_max_q}")
+        #print(f"New Q-value for {state}, {has_item}, {action}: {new_q:.2f}")
         # Update the Q-value for the current state and action
         self.Q[(state, has_item, action)] = new_q
 

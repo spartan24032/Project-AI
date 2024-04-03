@@ -74,7 +74,7 @@ class GridWorld:
         actions = []
 
         occupied_positions = [
-            (agent.get_state()[0]) for agent in agents if agent.get_state()[0] != state
+            (agent.get_state()[0]) for agent in agents
         ]
 
         # Check movement actions
@@ -88,7 +88,8 @@ class GridWorld:
             actions.append('pickup')
         if (x, y) in self.dropoffs and has_item and self.dropoffs[(x, y)] < self.dropoffStorage:
             actions.append('dropoff')
-
+        if actions == []:
+            actions.append('no op') # agent is stuck in a corner, cannot move.
         return actions
 
     def render(self, agents):
