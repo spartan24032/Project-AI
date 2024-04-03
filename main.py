@@ -23,7 +23,7 @@ if __name__ == "__main__":
     agents = [
         # alpha = learning rate , gamma = discount factor
         Agent(a, start_state=(2,2), policy = PExploit, alpha=0.3, gamma=0.5),
-        Agent(a, start_state=(1,1), policy = PExploit, alpha=0.5, gamma=0.3),
+        Agent(a, start_state=(1,1), policy = PRandom, alpha=0.5, gamma=0.3),
         #Agent(a, start_state=(4,4), policy=PExploit, alpha=0.3, gamma=0.5)
     ]
 
