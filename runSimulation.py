@@ -11,19 +11,19 @@ def run_simulation(agents, env, complex_world2=False, episodes=200):
 
         # use verbose to control which episodes get output
         # [0, episodes - 1] to see the first and last.
-        verbose = episode in [episodes - 1]  # Verbose output for the first and last episode
+        verbose = False # episode in [episodes - 1]  # Verbose output for the first and last episode
 
-        if verbose:
-            print(f"--- Episode {episode + 1} ---")
+        #if verbose:
+        #    print(f"--- Episode {episode + 1} ---")
         total_reward = 0
         step = -1
         actions_taken = []
 
-        while not (env.dropoffs_complete()):
+        while (step < 9000):
             step += 1
-            if verbose:
-                print(f"\nStep {step}")
-                env.render(agents)
+            #if verbose:
+            if step%100 == 0:   print(f"\nStep {step}")
+            if step%100 == 0: env.render(agents)
 
             actions_taken = []
             for idx, agent in enumerate(agents):
@@ -50,9 +50,9 @@ def run_simulation(agents, env, complex_world2=False, episodes=200):
 
                 actions_taken.append((idx, action, reward, new_state, valid_actions_current))
 
-                if env.dropoffs_complete():
-                    if verbose:
-                        print(f"\nStep {step + 1}")
-                        env.render(agents)
-                        print(f"All dropoffs complete.\nTotal Reward for Episode {episode + 1}: {total_reward}\n")
-                    break
+                #if env.dropoffs_complete():
+                #    if verbose:
+                #        print(f"\nStep {step + 1}")
+                #        env.render(agents)
+                #        print(f"All dropoffs complete.\nTotal Reward for Episode {episode + 1}: {total_reward}\n")
+                #    break

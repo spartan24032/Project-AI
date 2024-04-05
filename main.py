@@ -7,7 +7,7 @@ import random
 
 if __name__ == "__main__":
     # Define the environment
-    random.seed(5)
+    # random.seed(5)
     dropoffCapacity = 5
     size = 5
     pickups = {  # {(coordinate): starting capacity}
@@ -26,8 +26,6 @@ if __name__ == "__main__":
     agents = [
         # alpha = learning rate , gamma = discount factor
         Agent(a, start_state=(2,2), policy = PExploit, alpha=0.3, gamma=0.5),
-        #Agent(a, start_state=(1,1), policy = PExploit, alpha=0.5, gamma=0.3),
-        #Agent(a, start_state=(4,4), policy=PExploit, alpha=0.3, gamma=0.5)
     ]
 
-    run_simulation(agents, env, complex_world2, episodes=200)
+    run_simulation(agents, env, complex_world2, episodes=1)

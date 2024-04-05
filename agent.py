@@ -35,7 +35,7 @@ class Agent:
         next_max_q = max(q_values_next) if q_values_next else -1.0
 
         if current_q is None:
-            new_q = reward
+            new_q = reward * self.alpha
         else:
             new_q = current_q + self.alpha * (reward + self.gamma * next_max_q - current_q)
         self.Q_dicts[pd_string][(state, has_item, action)] = new_q
