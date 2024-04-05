@@ -1,6 +1,5 @@
 import random
 
-
 def PRandom(agent_state, has_item, q_values, valid_actions):
     for action in ['pickup', 'dropoff']:
         if action in valid_actions:

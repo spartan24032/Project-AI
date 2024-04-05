@@ -1,4 +1,5 @@
 # agent.py
+
 class Agent:
     def __init__(self, actions, start_state, policy, alpha=0.5, gamma=0.5):
         self.Q_dicts = {}
