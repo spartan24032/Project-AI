@@ -23,6 +23,7 @@ if __name__ == "__main__":
                             # It is great at finding the optimal policy, but uses 64x memory.
     episode_based = True  # This chooses if we are using episodes or steps to run the simulation
                            # False = steps, True = episodes
+    #  "r" will either be episodes to run or total steps to run, depending on this value.
 
     a = env.actions
     agents = [
@@ -32,4 +33,3 @@ if __name__ == "__main__":
         #Agent(a, start_state=(4,4), policy=PExploit, alpha=0.3, gamma=0.5)
     ]
     run_simulation(agents, env, complex_world2, episode_based, r=300)
-    #run_simulation(agents, env, complex_world2, episodes=200)
