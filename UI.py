@@ -2,6 +2,23 @@ import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
+import math
+from environment import GridWorld
+from agent import Agent
+from policies import PRandom, PExploit, PGreedy
+from runSimulation import run_simulation
+import random
+
+# Example preset data
+PRESET_AGENTS = [
+    ("(0,2)", "PExploit", "Q-learning", "0.5", "0.3"),
+    ("(2,2)", "PExploit", "Q-learning", "0.5", "0.3"),
+    ("(4,2)", "PExploit", "Q-learning", "0.5", "0.3"),
+]
+PRESET_PICKUPS = ["(0,4)", "(1,3)", "(4,1)"]
+PRESET_DROPOFFS = ["(0,0)", "(2,0)", "(3,4)"]
+PRESET_WORLDSIZE = '5'
+
 class SimulationControl(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -29,12 +46,18 @@ class SimulationControl(QMainWindow):
         self.tabs.addTab(self.chartsDataTab, "Charts and Data")
         self.initChartsDataTab()
 
-
     def initWorldCreationTab(self):
         layout = QVBoxLayout()
         layout.setSpacing(2)
+
+        presetBtn = QPushButton("Load Preset Data for Project", self)
+        presetBtn.clicked.connect(self.loadPresetData)
+        layout.addWidget(presetBtn)
+        presetBtn.setMaximumWidth(300)
+        layout.addItem(QSpacerItem(50, 50))
+
         randomSeedLayout = QHBoxLayout()
-        randomSeedLabel = QLabel("Random Seed: ")
+        randomSeedLabel = QLabel("Random Seed (leave blank for random seed): ")
         self.randomSeedInput = QLineEdit(self)
         randomSeedLayout.addWidget(randomSeedLabel)
         randomSeedLayout.addWidget(self.randomSeedInput)
@@ -79,6 +102,15 @@ class SimulationControl(QMainWindow):
         self.startCoordInput = QLineEdit()
         self.startCoordInput.setPlaceholderText("Start (x,y)")
         self.agentLayout.addWidget(self.startCoordInput)
+
+        self.alphaInput = QLineEdit(self)
+        self.alphaInput.setPlaceholderText("Alpha (0-1)")
+        self.agentLayout.addWidget(self.alphaInput)
+
+        # Input for gamma
+        self.gammaInput = QLineEdit(self)
+        self.gammaInput.setPlaceholderText("Gamma (0-1)")
+        self.agentLayout.addWidget(self.gammaInput)
 
         self.policyCombo = QComboBox()
         self.policyCombo.addItems(["PGreedy", "PExploit", "PRandom"])
@@ -249,20 +281,25 @@ class SimulationControl(QMainWindow):
     def addAgentToList(self):
         startCoords = self.startCoordInput.text()
         if startCoords:
+            alpha = self.alphaInput.text()
+            gamma = self.gammaInput.text()
             policy = self.policyCombo.currentText()
             learningFunction = self.learningFunctionCombo.currentText()
 
             # Add the collected data to the list of added agents
-            self.addedAgents.append((startCoords, policy, learningFunction))
+            self.addedAgents.append((startCoords, policy, learningFunction, alpha, gamma))
             self.startCoordInput.clear()
+            self.alphaInput.clear()
+            self.gammaInput.clear()
             self.updateAddedAgentsDisplay()
 
     def updateAddedAgentsDisplay(self):
         if not self.addedAgents:
             self.addedAgentsDisplay.setText("Added Agents: None")
         else:
-            agentsStr = "\n".join([f"Agent: {coords}, {policy}, {lf}"
-                                   for coords, policy, lf in self.addedAgents])
+            agentsStr = "\n".join(
+                [f"Start: {coords}, Policy: {policy}, Learning: {learning}, Alpha: {alpha}, Gamma: {gamma}"
+                 for coords, policy, learning, alpha, gamma in self.addedAgents])
             self.addedAgentsDisplay.setText(f"Added Agents:\n{agentsStr}")
             self.addedAgentsDisplay.setStyleSheet("color: #293BFF")
 
@@ -286,11 +323,52 @@ class SimulationControl(QMainWindow):
         print(f"Slider Value: {value}")
 
     def onCreateAndRunClicked(self):
-        random_seed = self.randomSeedInput.text()
-        use_complex_world = self.complexWorldCheck.isChecked()
-        print(f"Random Seed: {random_seed}")
-        print(f"Use Complex World2: {use_complex_world}")
+        # Assuming you have a method to parse coordinates from UI inputs
+        size = int(self.worldSizeInput.text())
+        try:
+            randomSeed = int(self.randomSeedInput.text())
+        except ValueError:
+            randomSeed = random.random()
 
+        # Setup environment
+        random.seed(randomSeed)
+        dropoffCapacity = int(self.capacityInput.text())
+        initialDropoffInventory = 0
+        pickups = {self.parseCoordinateToTuple(coord): dropoffCapacity for coord in self.pickupCoords}
+        dropoffs = {self.parseCoordinateToTuple(coord): initialDropoffInventory for coord in self.dropoffCoords}
+
+        env = GridWorld(size, pickups, dropoffs, dropoffCapacity)
+
+        # Setup agents
+        agentInstances = []
+        for agentConfig in self.addedAgents:
+            start_state = self.parseCoordinateToTuple(agentConfig[0])
+            policy = {"PGreedy": PGreedy, "PExploit": PExploit, "PRandom": PRandom}.get(agentConfig[1])
+            learning_algorithm = agentConfig[2]
+            alpha = float(agentConfig[3]) if agentConfig[3] else 0.7
+            gamma = float(agentConfig[4]) if agentConfig[4] else 0.8
+
+            # Setup agents
+            agentInstances = []
+            for agentConfig in self.addedAgents:
+                start_state = self.parseCoordinateToTuple(agentConfig[0])
+                policy = {"PGreedy": PGreedy, "PExploit": PExploit, "PRandom": PRandom}.get(agentConfig[1])
+                learning_algorithm = agentConfig[2]
+                agent = Agent(
+                    env.actions,
+                    start_state=start_state,
+                    policy=policy,
+                    learning_algorithm=learning_algorithm,
+                    alpha=alpha,
+                    gamma=gamma
+                )
+                agentInstances.append(agent)
+
+        complex_world2 = self.complexWorldCheck.isChecked()
+        episode_based = self.isEpisodeBased
+        r = int(self.episodesOrStepsInput.text())
+        # Run simulation
+        run_simulation(agentInstances, env, complex_world2, episode_based, r)
 
     def initBlankWorldPreview(self, size, agents=[], pickups=[], dropoffs=[]):
         self.clearLayout(self.worldPreviewLayout)
@@ -351,6 +429,34 @@ class SimulationControl(QMainWindow):
                     print(f"Invalid coordinate format: {clean_part}")
                     continue
         return coordinates
+
+    def parseCoordinateToTuple(self, coordinateString):
+        """Parses a single coordinate string '(x,y)' into a tuple (x, y)."""
+        # Strip the parentheses and split by comma
+        x, y = map(int, coordinateString.strip("()").split(","))
+        return (x, y)
+
+    def loadPresetData(self):
+        # Clear existing data
+        self.addedAgents.clear()
+        self.pickupCoords.clear()
+        self.dropoffCoords.clear()
+
+        # Load preset agent data
+        self.addedAgents.extend(PRESET_AGENTS)
+
+        # Load preset pickup and dropoff locations
+        self.pickupCoords.extend(PRESET_PICKUPS)
+        self.dropoffCoords.extend(PRESET_DROPOFFS)
+        self.worldSizeInput.setText(PRESET_WORLDSIZE)
+        self.capacityInput.setText('5')
+        self.episodesOrStepsInput.setText('30')
+        self.randomSeedInput.setText('11')
+
+        # Update the UI to reflect the preset data
+        self.updateAddedAgentsDisplay()
+        self.updateAddedPickupDropoffDisplay()
+        self.onPreviewWorldClicked()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
