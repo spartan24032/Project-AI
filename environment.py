@@ -2,7 +2,7 @@
 import numpy as np
 
 class GridWorld:
-    def __init__(self, size=5, pickups=None, dropoffs=None, dropoffCapacity = 5):
+    def __init__(self, size, pickups=None, dropoffs=None, dropoffCapacity = 5):
         self.size = size
         self.actions = ['N', 'E', 'S', 'W', 'pickup', 'dropoff']
         self.dropoffStorage = dropoffCapacity

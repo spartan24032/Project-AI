@@ -30,7 +30,7 @@ def run_simulation(agents, env, sim_control, complex_world2=False, episode_based
             verbose = step % 1 == 0
             step += 1
             if sim_control.skip_to_step is None:
-                sim_control.updateCurrentWorldDisplay(agents, env)
+                sim_control.updateCurrentWorldDisplay(agents, env, episode, step, r)
             if verbose:
                 print(f"\nStep {step}")
                 env.render(agents)
@@ -74,14 +74,16 @@ def run_simulation(agents, env, sim_control, complex_world2=False, episode_based
                 # Skip functionality
                 if sim_control.skip_to_step is not None:
                     print(f"skip to step/episode enabled, skipping to {sim_control.skip_to_step}")
-                    if episode_based and episode >= (int(sim_control.skip_to_step)-1):
+                    if episode_based and episode >= (int(sim_control.skip_to_step)):
                         sim_control.skip_to_step = None  # Reset skipping logic
+                        sim_control.updateCurrentWorldDisplay(agents, env, episode, step, r)
                     elif not episode_based and step >= (int(sim_control.skip_to_step)-1):
                         sim_control.skip_to_step = None  # Reset skipping logic
+                        sim_control.updateCurrentWorldDisplay(agents, env, episode, step, r)
                     continue  # Proceed to the next iteration without executing further actions
                 if sim_control.autoplay_enabled:
                     print("autoplay enabled")
-                    time.sleep(1.0 / sim_control.speedSlider.value()*2)  # Adjust based on the speed slider
+                    time.sleep(5.0 / sim_control.speedSlider.value())  # Adjust based on the speed slider
                 else:
                     print("waiting on next step signal")
                     sim_control.next_step_event.wait()  # Wait for the next step signal

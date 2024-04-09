@@ -182,6 +182,13 @@ class SimulationControl(QMainWindow):
     def initSimulationControlTab(self):
 
         layout = QGridLayout()
+        layout.setRowStretch(5, 1)
+
+        # Define QLabel widgets for episode, step, and playback status
+        self.episodeLabel = QLabel("Episode: 0")
+        layout.addWidget(self.episodeLabel, 0, 0, 1, -1)
+        self.episodeLabel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        layout.setRowMinimumHeight(0, 1)
 
         # Simulation display area for images or text
         self.worldStateContainer = QFrame(self)
@@ -189,58 +196,62 @@ class SimulationControl(QMainWindow):
         self.worldStateGrid = QGridLayout()
         self.worldStateContainer.setLayout(self.worldStateGrid)
 
-        layout.addWidget(self.worldStateContainer, 0, 0, 1, 4)
+        layout.addWidget(self.worldStateContainer, 1, 0, 1, -1)
         self.simulationControlTab.setLayout(layout)
         # Initialize the grid with a default size (e.g., 5x5)
         self.initWorldStateGrid(5)
+
+        self.spacerFrame = QFrame(self)
+        self.spacerFrame.setFixedSize(100, 100)
+        layout.addWidget(self.spacerFrame, 0, 5, 1, 1)
 
         # Q-table display area
         self.qTableDisplay = QTextEdit(self)
         self.qTableDisplay.setPlaceholderText("Q-Table Display")
         self.qTableDisplay.setReadOnly(True)
-        layout.addWidget(self.qTableDisplay, 0, 4, 1, 1)  # Next to the simulation display
+        layout.addWidget(self.qTableDisplay, 0, 6, 5, -1)  # Next to the simulation display
 
         # Button to proceed to the next step
         self.nextBtn = QPushButton('Next', self)
         self.nextBtn.clicked.connect(self.onNextClicked)
-        layout.addWidget(self.nextBtn, 1, 0)
+        layout.addWidget(self.nextBtn, 2, 0)
 
         # Button to play continuously
         self.playBtn = QPushButton('Play', self)
         self.playBtn.clicked.connect(self.onPlayClicked)
-        layout.addWidget(self.playBtn, 1, 1)
+        layout.addWidget(self.playBtn, 2, 1)
 
         # Button to pause autoplay
         self.pauseBtn = QPushButton('Pause', self)
         self.pauseBtn.clicked.connect(self.onPauseClicked)
-        layout.addWidget(self.pauseBtn, 1, 2)
+        layout.addWidget(self.pauseBtn, 2, 2)
 
         # Input for skipping steps
         self.skipInput = QLineEdit(self)
         self.skipInput.setPlaceholderText('steps/episodes to skip')
         self.skipInput.setMaximumWidth(250)
-        layout.addWidget(self.skipInput, 1, 3)
+        layout.addWidget(self.skipInput, 4, 0)
 
         # Button to skip steps
-        self.skipBtn = QPushButton('Skip', self)
+        self.skipBtn = QPushButton('Skip there', self)
         self.skipBtn.clicked.connect(self.onSkipClicked)
         self.skipBtn.setMaximumWidth(150)
-        layout.addWidget(self.skipBtn, 1, 4)
+        layout.addWidget(self.skipBtn, 4, 1)
 
         # Slider for controlling autoplay speed
         self.speedSlider = QSlider(Qt.Horizontal)
         self.speedSlider.setMinimum(1)
-        self.speedSlider.setMaximum(100)
-        self.speedSlider.setValue(50)  # Default value
+        self.speedSlider.setMaximum(50)
+        self.speedSlider.setValue(25)  # Default value
 
         # Label to display slider value
-        self.speedValueLabel = QLabel("50")  # Initialize with default slider value
+        self.speedValueLabel = QLabel("25")  # Initialize with default slider value
         self.speedSlider.valueChanged.connect(self.updateSpeedValue)  # Connect signal to slot
 
         # Layout adjustments to include the slider and its value label
-        layout.addWidget(QLabel("Speed:"), 2, 0)
-        layout.addWidget(self.speedSlider, 2, 1, 1, 2)
-        layout.addWidget(self.speedValueLabel, 2, 3)  # Display the current speed value next to the slider
+        layout.addWidget(QLabel("Speed:"), 3, 0)
+        layout.addWidget(self.speedSlider, 3, 1, 1, 2)
+        layout.addWidget(self.speedValueLabel, 3, 3)  # Display the current speed value next to the slider
 
         self.simulationControlTab.setLayout(layout)
 ######
@@ -261,7 +272,7 @@ class SimulationControl(QMainWindow):
                 cellLabel.setAlignment(Qt.AlignCenter)
                 # Set style for better visibility
                 cellLabel.setStyleSheet("border: 1px solid black;")
-                cellLabel.setFixedSize(120, 120)
+                cellLabel.setFixedSize(int(600/size), int(600/size))
 
                 # Display agents, pickups, and dropoffs with specific styles
                 if (row, col) in agents:
@@ -276,16 +287,18 @@ class SimulationControl(QMainWindow):
 
                 self.worldStateGrid.addWidget(cellLabel, row, col)
 
-        # Optionally, adjust the size of the container if needed
-        self.worldStateContainer.setFixedSize(size * 140, size * 140)
+        self.worldStateContainer.setFixedSize(700, 700)
 
-    def updateCurrentWorldDisplay(self, agents, env):
+    def updateCurrentWorldDisplay(self, agents, env, ep, step, r):
+        if ep is not None:
+            self.episodeLabel.setText(f"Episode: {ep}/{r}, Step: {step}")
         size, actions, dropoffStorage, pickups, dropoffs, used_dropoffs = env.UIrenderVals()
         for row in range(size):
             for col in range(size):
                 cell_label = self.worldStateGrid.itemAtPosition(row, col).widget()
                 base_content = ' '
                 cell_style = "QLabel { font-weight: bold; border: 1px solid black; "
+                cell_style += "background-color: white; color: black; "  # Default background
 
                 # Check for pickups and dropoffs
                 if (row, col) in pickups:
@@ -302,19 +315,19 @@ class SimulationControl(QMainWindow):
                     if agent_state == (row, col):
                         agent_mark = 'C' if has_item else 'A'
                         agent_id = str(idx)
-                        agent_here = True
                         base_content = f"{agent_mark}{agent_id}"
                         cell_style += "background-color: #e74c3c; color: white; "  # Red background for agent
                         break
-
-                if not agent_here:
-                    cell_style += "background-color: white; color: black; "  # Default background
 
                 cell_style += "}"
 
                 # Find the QLabel in the current cell and update it
                 cell_label.setText(base_content)
                 cell_label.setStyleSheet(cell_style)
+
+    def updateSimulationDisplay(self, episode=None, step=None, status=None):
+        if episode is not None:
+            self.episodeLabel.setText(f"Episode: {episode}, Step: {step}")
 
     def onNextClicked(self):
         # Signal the simulation to proceed to the next step
