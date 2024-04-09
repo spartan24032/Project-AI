@@ -4,6 +4,7 @@ from agent import Agent
 from policies import PRandom, PExploit, PGreedy
 from runSimulation import run_simulation
 import random
+from UI import MockSimulationControl
 
 if __name__ == "__main__":
     # Define the environment
@@ -32,4 +33,5 @@ if __name__ == "__main__":
         #Agent(a, start_state=(1,1), policy = PExploit, alpha=0.5, gamma=0.3),
         #Agent(a, start_state=(4,4), policy=PExploit, alpha=0.3, gamma=0.5)
     ]
-    run_simulation(agents, env, complex_world2, episode_based, r=300)
+    sim_control = MockSimulationControl() # This is a mock control class that does nothing, allows code to run without UI
+    run_simulation(agents, env, sim_control, complex_world2, episode_based, r=300)

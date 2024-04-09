@@ -2,6 +2,7 @@ import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
+import threading
 import math
 from environment import GridWorld
 from agent import Agent
@@ -26,6 +27,14 @@ class SimulationControl(QMainWindow):
         self.pickupCoords = []
         self.dropoffCoords = []
         self.initUI()
+
+        # Event to signal proceeding to the next step
+        self.next_step_event = threading.Event()
+        # Condition to manage autoplay and skip functionality
+        self.autoplay_condition = threading.Condition()
+        self.autoplay_enabled = False
+        self.skip_to_step = None  # None means no skipping, otherwise store target step/episode
+        self.masterskip = False
 
     def initUI(self):
         self.setWindowTitle('Simulation Control')
@@ -171,6 +180,7 @@ class SimulationControl(QMainWindow):
         self.worldCreationTab.setLayout(layout)
 ######
     def initSimulationControlTab(self):
+
         layout = QGridLayout()
 
         # Simulation display area for images or text
@@ -269,21 +279,61 @@ class SimulationControl(QMainWindow):
         # Optionally, adjust the size of the container if needed
         self.worldStateContainer.setFixedSize(size * 140, size * 140)
 
+    def updateCurrentWorldDisplay(self, agents, env):
+        size, actions, dropoffStorage, pickups, dropoffs, used_dropoffs = env.UIrenderVals()
+        for row in range(size):
+            for col in range(size):
+                cell_label = self.worldStateGrid.itemAtPosition(row, col).widget()
+                base_content = ' '
+                cell_style = "QLabel { font-weight: bold; border: 1px solid black; "
+
+                # Check for pickups and dropoffs
+                if (row, col) in pickups:
+                    base_content = f'P{pickups[(row, col)]}'
+                    cell_style += "background-color: #3498db; color: white; "  # Light blue background
+                elif (row, col) in dropoffs:
+                    base_content = f'D{dropoffs[(row, col)]}'
+                    cell_style += "background-color: #2ecc71; color: white; "  # Green background
+
+                # Overlay agents
+                agent_here = False
+                for idx, agent in enumerate(agents):
+                    agent_state, has_item = agent.get_state()
+                    if agent_state == (row, col):
+                        agent_mark = 'C' if has_item else 'A'
+                        agent_id = str(idx)
+                        agent_here = True
+                        base_content = f"{agent_mark}{agent_id}"
+                        cell_style += "background-color: #e74c3c; color: white; "  # Red background for agent
+                        break
+
+                if not agent_here:
+                    cell_style += "background-color: white; color: black; "  # Default background
+
+                cell_style += "}"
+
+                # Find the QLabel in the current cell and update it
+                cell_label.setText(base_content)
+                cell_label.setStyleSheet(cell_style)
+
     def onNextClicked(self):
-        print("Next clicked")
+        # Signal the simulation to proceed to the next step
+        print("next clicked, setting next_step_event")
+        self.next_step_event.set()
 
     def onPlayClicked(self):
-        print("Play clicked")
+        with self.autoplay_condition:
+            self.autoplay_enabled = True
+            self.autoplay_condition.notify()  # Wake up the simulation if it's waiting
+        self.next_step_event.set()
 
     def onPauseClicked(self):
-        print("Pause clicked")
+        self.autoplay_enabled = False
 
     def onSkipClicked(self):
-        if self.skipInput.text():
-            steps = int(self.skipInput.text())
-        else:
-            steps = 1
-        print("Skipping", steps, "episode/steps")
+        self.skip_to_step = self.skipInput.text()
+        # Optionally, signal to proceed if waiting for the next step
+        self.next_step_event.set()
 
     def updateSpeedValue(self, value):
         # Update the label with the current slider value
@@ -363,6 +413,7 @@ class SimulationControl(QMainWindow):
             self.addedAgentsDisplay.setStyleSheet("color: #293BFF")
 
     def onCreateAndRunClicked(self):
+
         # Assuming you have a method to parse coordinates from UI inputs
         size = int(self.worldSizeInput.text())
         try:
@@ -408,9 +459,14 @@ class SimulationControl(QMainWindow):
         episode_based = self.isEpisodeBased
         r = int(self.episodesOrStepsInput.text())
         # Run simulation
-        run_simulation(agentInstances, env, complex_world2, episode_based, r)
+        #run_simulation(agentInstances, env, sim_control, complex_world2, episode_based, r)
         # initWorldStateGrid(self, size, agents=[], pickups=[], dropoffs=[])
         self.initWorldStateGrid(size, agentInstances, pickups,dropoffs)
+        # Create a thread to run the simulation without blocking the UI
+        simulationThread = threading.Thread(target=run_simulation,
+                                                 args=(agentInstances, env, self, complex_world2, episode_based, r))
+        simulationThread.start()
+        # Optionally, switch to the "Simulation Control" tab
         self.tabs.setCurrentIndex(self.tabs.indexOf(self.simulationControlTab))
 
     def initBlankWorldPreview(self, size, agents=[], pickups=[], dropoffs=[]):
@@ -498,6 +554,12 @@ class SimulationControl(QMainWindow):
         self.updateAddedAgentsDisplay()
         self.updateAddedPickupDropoffDisplay()
         self.onPreviewWorldClicked()
+
+class MockSimulationControl:
+    def __init__(self):
+        # Since this mock class is for running without UI, we don't actually wait for any events.
+        self.next_step_event = threading.Event()
+        self.masterskip = True
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

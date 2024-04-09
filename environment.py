@@ -155,3 +155,12 @@ class GridWorld:
                 row_str += f"|{cell_content:4}"  # Build the row string
             print(row_str + "|")
             print("+----" * self.size + "+")
+    def UIrenderVals(self):
+        return(
+            self.size,
+            self.actions,
+            self.dropoffStorage,
+            self.pickups,
+            self.dropoffs,
+            self.used_dropoffs
+        )
