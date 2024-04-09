@@ -33,7 +33,7 @@ class SimulationControl(QMainWindow):
         # Condition to manage autoplay and skip functionality
         self.autoplay_condition = threading.Condition()
         self.autoplay_enabled = False
-        self.skip_to_step = None  # None means no skipping, otherwise store target step/episode
+        self.skip_to_step = None
         self.masterskip = False
 
     def initUI(self):
@@ -183,8 +183,6 @@ class SimulationControl(QMainWindow):
 
         layout = QGridLayout()
         layout.setRowStretch(5, 1)
-
-        # Define QLabel widgets for episode, step, and playback status
         self.episodeLabel = QLabel("Episode: 0")
         layout.addWidget(self.episodeLabel, 0, 0, 1, -1)
         self.episodeLabel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
@@ -262,7 +260,6 @@ class SimulationControl(QMainWindow):
 
 ######################################################################
     def initWorldStateGrid(self, size, agents=[], pickups=[], dropoffs=[]):
-        # Clear existing grid layout
         self.clearLayout(self.worldStateGrid)
 
         for row in range(size):
@@ -321,7 +318,6 @@ class SimulationControl(QMainWindow):
 
                 cell_style += "}"
 
-                # Find the QLabel in the current cell and update it
                 cell_label.setText(base_content)
                 cell_label.setStyleSheet(cell_style)
 
@@ -330,14 +326,13 @@ class SimulationControl(QMainWindow):
             self.episodeLabel.setText(f"Episode: {episode}, Step: {step}")
 
     def onNextClicked(self):
-        # Signal the simulation to proceed to the next step
         print("next clicked, setting next_step_event")
         self.next_step_event.set()
 
     def onPlayClicked(self):
         with self.autoplay_condition:
             self.autoplay_enabled = True
-            self.autoplay_condition.notify()  # Wake up the simulation if it's waiting
+            self.autoplay_condition.notify()
         self.next_step_event.set()
 
     def onPauseClicked(self):
@@ -345,11 +340,9 @@ class SimulationControl(QMainWindow):
 
     def onSkipClicked(self):
         self.skip_to_step = self.skipInput.text()
-        # Optionally, signal to proceed if waiting for the next step
         self.next_step_event.set()
 
     def updateSpeedValue(self, value):
-        # Update the label with the current slider value
         self.speedValueLabel.setText(str(value))
         print(f"Slider Value: {value}")
 
@@ -472,8 +465,6 @@ class SimulationControl(QMainWindow):
         episode_based = self.isEpisodeBased
         r = int(self.episodesOrStepsInput.text())
         # Run simulation
-        #run_simulation(agentInstances, env, sim_control, complex_world2, episode_based, r)
-        # initWorldStateGrid(self, size, agents=[], pickups=[], dropoffs=[])
         self.initWorldStateGrid(size, agentInstances, pickups,dropoffs)
         # Create a thread to run the simulation without blocking the UI
         simulationThread = threading.Thread(target=run_simulation,
