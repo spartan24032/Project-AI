@@ -169,6 +169,128 @@ class SimulationControl(QMainWindow):
         self.randomSeedInput.setMaximumWidth(200)
         self.simulationModeBtn.setMaximumWidth(200)
         self.worldCreationTab.setLayout(layout)
+######
+    def initSimulationControlTab(self):
+        layout = QGridLayout()
+
+        # Simulation display area for images or text
+        self.worldStateContainer = QFrame(self)
+        self.worldStateContainer.setFrameShape(QFrame.StyledPanel)
+        self.worldStateGrid = QGridLayout()
+        self.worldStateContainer.setLayout(self.worldStateGrid)
+
+        layout.addWidget(self.worldStateContainer, 0, 0, 1, 4)
+        self.simulationControlTab.setLayout(layout)
+        # Initialize the grid with a default size (e.g., 5x5)
+        self.initWorldStateGrid(5)
+
+        # Q-table display area
+        self.qTableDisplay = QTextEdit(self)
+        self.qTableDisplay.setPlaceholderText("Q-Table Display")
+        self.qTableDisplay.setReadOnly(True)
+        layout.addWidget(self.qTableDisplay, 0, 4, 1, 1)  # Next to the simulation display
+
+        # Button to proceed to the next step
+        self.nextBtn = QPushButton('Next', self)
+        self.nextBtn.clicked.connect(self.onNextClicked)
+        layout.addWidget(self.nextBtn, 1, 0)
+
+        # Button to play continuously
+        self.playBtn = QPushButton('Play', self)
+        self.playBtn.clicked.connect(self.onPlayClicked)
+        layout.addWidget(self.playBtn, 1, 1)
+
+        # Button to pause autoplay
+        self.pauseBtn = QPushButton('Pause', self)
+        self.pauseBtn.clicked.connect(self.onPauseClicked)
+        layout.addWidget(self.pauseBtn, 1, 2)
+
+        # Input for skipping steps
+        self.skipInput = QLineEdit(self)
+        self.skipInput.setPlaceholderText('steps/episodes to skip')
+        self.skipInput.setMaximumWidth(250)
+        layout.addWidget(self.skipInput, 1, 3)
+
+        # Button to skip steps
+        self.skipBtn = QPushButton('Skip', self)
+        self.skipBtn.clicked.connect(self.onSkipClicked)
+        self.skipBtn.setMaximumWidth(150)
+        layout.addWidget(self.skipBtn, 1, 4)
+
+        # Slider for controlling autoplay speed
+        self.speedSlider = QSlider(Qt.Horizontal)
+        self.speedSlider.setMinimum(1)
+        self.speedSlider.setMaximum(100)
+        self.speedSlider.setValue(50)  # Default value
+
+        # Label to display slider value
+        self.speedValueLabel = QLabel("50")  # Initialize with default slider value
+        self.speedSlider.valueChanged.connect(self.updateSpeedValue)  # Connect signal to slot
+
+        # Layout adjustments to include the slider and its value label
+        layout.addWidget(QLabel("Speed:"), 2, 0)
+        layout.addWidget(self.speedSlider, 2, 1, 1, 2)
+        layout.addWidget(self.speedValueLabel, 2, 3)  # Display the current speed value next to the slider
+
+        self.simulationControlTab.setLayout(layout)
+######
+    def initChartsDataTab(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Data Visualization Will Be Here"))
+        self.chartsDataTab.setLayout(layout)
+
+######################################################################
+    def initWorldStateGrid(self, size, agents=[], pickups=[], dropoffs=[]):
+        # Clear existing grid layout
+        self.clearLayout(self.worldStateGrid)
+
+        for row in range(size):
+            for col in range(size):
+                cellLabel = QLabel(f"{row},{col}")
+                cellLabel.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+                cellLabel.setAlignment(Qt.AlignCenter)
+                # Set style for better visibility
+                cellLabel.setStyleSheet("border: 1px solid black;")
+                cellLabel.setFixedSize(120, 120)
+
+                # Display agents, pickups, and dropoffs with specific styles
+                if (row, col) in agents:
+                    cellLabel.setText("Agent")
+                    cellLabel.setStyleSheet("color: blue; font-size: 20px; border: 1px solid black;")
+                elif (row, col) in pickups:
+                    cellLabel.setText("P")
+                    cellLabel.setStyleSheet("color: green; font-size: 20px; border: 1px solid black;")
+                elif (row, col) in dropoffs:
+                    cellLabel.setText("D")
+                    cellLabel.setStyleSheet("color: red; font-size: 20px; border: 1px solid black;")
+
+                self.worldStateGrid.addWidget(cellLabel, row, col)
+
+        # Optionally, adjust the size of the container if needed
+        self.worldStateContainer.setFixedSize(size * 140, size * 140)
+
+    def onNextClicked(self):
+        print("Next clicked")
+
+    def onPlayClicked(self):
+        print("Play clicked")
+
+    def onPauseClicked(self):
+        print("Pause clicked")
+
+    def onSkipClicked(self):
+        if self.skipInput.text():
+            steps = int(self.skipInput.text())
+        else:
+            steps = 1
+        print("Skipping", steps, "episode/steps")
+
+    def updateSpeedValue(self, value):
+        # Update the label with the current slider value
+        self.speedValueLabel.setText(str(value))
+        print(f"Slider Value: {value}")
+
+########
 
     def deleteLastAgent(self):
         if self.addedAgents:
@@ -205,69 +327,6 @@ class SimulationControl(QMainWindow):
             self.addedPickupDropoffDisplay.setText(f"Pickup/Dropoff Pairs:\n{pairsStr}")
             self.addedPickupDropoffDisplay.setStyleSheet("color: #293BFF")
 
-
-    def initSimulationControlTab(self):
-        layout = QGridLayout()
-
-        # Simulation display area for images or text
-        self.simulationDisplay = QTextEdit(self)
-        self.simulationDisplay.setPlaceholderText("Simulation Display")
-        self.simulationDisplay.setReadOnly(True)
-        layout.addWidget(self.simulationDisplay, 0, 0, 1, 4)  # Span four columns for a wider display
-
-        # Q-table display area
-        self.qTableDisplay = QTextEdit(self)
-        self.qTableDisplay.setPlaceholderText("Q-Table Display")
-        self.qTableDisplay.setReadOnly(True)
-        layout.addWidget(self.qTableDisplay, 0, 4, 1, 2)  # Next to the simulation display
-
-        # Button to proceed to the next step
-        self.nextBtn = QPushButton('Next', self)
-        self.nextBtn.clicked.connect(self.onNextClicked)
-        layout.addWidget(self.nextBtn, 1, 0)
-
-        # Button to play continuously
-        self.playBtn = QPushButton('Play', self)
-        self.playBtn.clicked.connect(self.onPlayClicked)
-        layout.addWidget(self.playBtn, 1, 1)
-
-        # Button to pause autoplay
-        self.pauseBtn = QPushButton('Pause', self)
-        self.pauseBtn.clicked.connect(self.onPauseClicked)
-        layout.addWidget(self.pauseBtn, 1, 2)
-
-        # Input for skipping steps
-        self.skipInput = QLineEdit(self)
-        self.skipInput.setPlaceholderText('Enter steps to skip')
-        layout.addWidget(self.skipInput, 1, 3)
-
-        # Button to skip steps
-        self.skipBtn = QPushButton('Skip', self)
-        self.skipBtn.clicked.connect(self.onSkipClicked)
-        layout.addWidget(self.skipBtn, 1, 4)
-
-        # Slider for controlling autoplay speed
-        self.speedSlider = QSlider(Qt.Horizontal)
-        self.speedSlider.setMinimum(1)
-        self.speedSlider.setMaximum(100)
-        self.speedSlider.setValue(50)  # Default value
-
-        # Label to display slider value
-        self.speedValueLabel = QLabel("50")  # Initialize with default slider value
-        self.speedSlider.valueChanged.connect(self.updateSpeedValue)  # Connect signal to slot
-
-        # Layout adjustments to include the slider and its value label
-        layout.addWidget(QLabel("Speed:"), 2, 0)
-        layout.addWidget(self.speedSlider, 2, 1, 1, 2)
-        layout.addWidget(self.speedValueLabel, 2, 3)  # Display the current speed value next to the slider
-
-        self.simulationControlTab.setLayout(layout)
-
-    def initChartsDataTab(self):
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("Data Visualization Will Be Here"))
-        self.chartsDataTab.setLayout(layout)
-
     isEpisodeBased = True
     def toggleSimulationMode(self):
         if self.isEpisodeBased:
@@ -302,25 +361,6 @@ class SimulationControl(QMainWindow):
                  for coords, policy, learning, alpha, gamma in self.addedAgents])
             self.addedAgentsDisplay.setText(f"Added Agents:\n{agentsStr}")
             self.addedAgentsDisplay.setStyleSheet("color: #293BFF")
-
-    def onNextClicked(self):
-        print("Next clicked")
-
-    def onPlayClicked(self):
-        print("Play clicked")
-
-    def onPauseClicked(self):
-        print("Pause clicked")
-
-    def onSkipClicked(self):
-        steps = int(self.skipInput.text())
-        print("Skipping to episode/step", steps)
-
-    def updateSpeedValue(self, value):
-        # Update the label with the current slider value
-        self.speedValueLabel.setText(str(value))
-        # Optionally, print the value to the console
-        print(f"Slider Value: {value}")
 
     def onCreateAndRunClicked(self):
         # Assuming you have a method to parse coordinates from UI inputs
@@ -369,6 +409,9 @@ class SimulationControl(QMainWindow):
         r = int(self.episodesOrStepsInput.text())
         # Run simulation
         run_simulation(agentInstances, env, complex_world2, episode_based, r)
+        # initWorldStateGrid(self, size, agents=[], pickups=[], dropoffs=[])
+        self.initWorldStateGrid(size, agentInstances, pickups,dropoffs)
+        self.tabs.setCurrentIndex(self.tabs.indexOf(self.simulationControlTab))
 
     def initBlankWorldPreview(self, size, agents=[], pickups=[], dropoffs=[]):
         self.clearLayout(self.worldPreviewLayout)
@@ -395,7 +438,6 @@ class SimulationControl(QMainWindow):
                     cellLabel.setText("D")
                     cellLabel.setStyleSheet("color: red; font-size: 20px; border: 1px solid black;")
 
-                gridLayout.addWidget(cellLabel, row, col)
                 gridLayout.addWidget(cellLabel, row, col)
 
         gridContainer.setLayout(gridLayout)
@@ -432,7 +474,6 @@ class SimulationControl(QMainWindow):
 
     def parseCoordinateToTuple(self, coordinateString):
         """Parses a single coordinate string '(x,y)' into a tuple (x, y)."""
-        # Strip the parentheses and split by comma
         x, y = map(int, coordinateString.strip("()").split(","))
         return (x, y)
 
