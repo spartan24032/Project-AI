@@ -203,11 +203,23 @@ class SimulationControl(QMainWindow):
         self.spacerFrame.setFixedSize(100, 100)
         layout.addWidget(self.spacerFrame, 0, 5, 1, 1)
 
-        # Q-table display area
-        self.qTableDisplay = QTextEdit(self)
-        self.qTableDisplay.setPlaceholderText("Q-Table Display")
-        self.qTableDisplay.setReadOnly(True)
-        layout.addWidget(self.qTableDisplay, 0, 6, 5, -1)  # Next to the simulation display
+        self.qValuesScrollArea = QScrollArea(self.simulationControlTab)  # Ensure it's a child of the tab widget
+        self.qValuesScrollArea.setWidgetResizable(True)
+        self.qValuesScrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+
+        # Container widget for Q-values content
+        self.qValuesContainer = QWidget()
+        self.qValuesScrollArea.setWidget(self.qValuesContainer)  # Set the container widget to the scroll area
+        self.qValuesLayout = QVBoxLayout(self.qValuesContainer)  # Use the container as the parent for the layout
+
+        placeholderLabel = QLabel(
+            "Agent Q-values placeholder text...")
+        placeholderLabel.setStyleSheet("margin: 10px;")
+        self.qValuesLayout.addWidget(placeholderLabel)
+
+        self.qValuesScrollArea.setWidget(self.qValuesContainer)
+        layout.addWidget(self.qValuesScrollArea, 0, 6, 5, -1)
+        self.qValuesLayout.addStretch()
 
         # Button to proceed to the next step
         self.nextBtn = QPushButton('Next', self)
@@ -306,7 +318,6 @@ class SimulationControl(QMainWindow):
                     cell_style += "background-color: #2ecc71; color: white; "  # Green background
 
                 # Overlay agents
-                agent_here = False
                 for idx, agent in enumerate(agents):
                     agent_state, has_item = agent.get_state()
                     if agent_state == (row, col):
@@ -320,10 +331,40 @@ class SimulationControl(QMainWindow):
 
                 cell_label.setText(base_content)
                 cell_label.setStyleSheet(cell_style)
+        self.updateQValuesDisplay(agents)
 
-    def updateSimulationDisplay(self, episode=None, step=None, status=None):
+    def updateSimulationDisplay(self, episode=None, step=None):
         if episode is not None:
             self.episodeLabel.setText(f"Episode: {episode}, Step: {step}")
+
+    def updateQValuesDisplay(self, agents):
+        print("update Q-value display called")
+        while self.qValuesLayout.count():
+            child = self.qValuesLayout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
+        # For each agent, display its Q-values
+        for idx, agent in enumerate(agents):
+            Q_dicts = agent.return_q_dicts()
+            state, has_item = agent.get_state()
+
+            # Initialize the text for this agent's Q-values display
+            q_values_text = f"Agent {idx} at {state}, with item: {has_item}\nQ-values:\n"
+            #print(f"Agent {idx} at {state}, with item: {has_item}\nQ-values:\n")
+
+            for action in agent.actions:
+                q_value = Q_dicts[5].get((state, has_item, action), "--")
+                display_value = f"{q_value:.2f}" if q_value != "--" else "--"
+                q_values_text += f"    {action}: {display_value}\n"
+
+            # Create a QLabel for this agent's Q-values and add it to the layout
+            agent_q_values_label = QLabel(q_values_text)
+            agent_q_values_label.setStyleSheet(
+                "margin: 5px; padding: 5px; border: 1px solid black; background-color: #fcba03;")
+            self.qValuesLayout.addWidget(agent_q_values_label)
+
+        self.qValuesLayout.addStretch()  # Ensures content is top-aligned
 
     def onNextClicked(self):
         print("next clicked, setting next_step_event")
@@ -564,6 +605,7 @@ class MockSimulationControl:
         # Since this mock class is for running without UI, we don't actually wait for any events.
         self.next_step_event = threading.Event()
         self.masterskip = True
+        self.skip_to_step = False
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

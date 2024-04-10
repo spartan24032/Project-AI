@@ -1,6 +1,7 @@
 # runSimulation.py
 import time
 
+
 def run_simulation(agents, env, sim_control, complex_world2=False, episode_based=True, r=200):
 
     if episode_based:
@@ -53,6 +54,7 @@ def run_simulation(agents, env, sim_control, complex_world2=False, episode_based
                 if verbose:
                     print(f"\033[91mAgent {idx}\033[0m {old_state}, Valid Actions: {valid_actions_current}")
                     agents[idx].display_q_values(pd_string)
+
                 reward = env.step(agent, action)  # Perform the action, moving to the new state
                 total_reward += reward
                 pd_string = env.generate_pd_string(complex_world2)
