@@ -51,14 +51,21 @@ class Agent:
             new_q = current_q + self.alpha * (reward + self.gamma * next_q - current_q)
             self.Q_dicts[pd_string][(state, has_item, action)] = new_q
 
-    def choose_action(self, valid_actions, pd_string, step):
+    def choose_action(self, valid_actions, pd_string, step, episode, ep_based):
         if pd_string not in self.Q_dicts:
             self.Q_dicts[pd_string] = {}
         action = self.policy(self.state, self.has_item, self.Q_dicts[pd_string], valid_actions)
-        if self.override_policy and self.terminate_override_step > step:
-            action = self.override_policy(self.state, self.has_item, self.Q_dicts[pd_string], valid_actions)
-            if self.terminate_override_step <= step: # Revert to default policy if override duration has elapsed
-                self.policy = self.default_policy
+        if self.terminate_override_step != 0:
+            if not ep_based:
+                if self.override_policy and self.terminate_override_step > step:
+                    action = self.override_policy(self.state, self.has_item, self.Q_dicts[pd_string], valid_actions)
+                    if self.terminate_override_step <= step: # Revert to default policy if override duration has elapsed
+                        self.policy = self.default_policy
+            elif ep_based:
+                if self.override_policy and self.terminate_override_step > episode:
+                    action = self.override_policy(self.state, self.has_item, self.Q_dicts[pd_string], valid_actions)
+                    if self.terminate_override_step <= episode:
+                        self.policy = self.default_policy
         return action
 
     def return_q_dicts(self):

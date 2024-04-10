@@ -96,7 +96,7 @@ class SimulationWorker(QObject):
                     old_state, old_has_item = agent.get_state()
                     # Get valid actions for the CURRENT state, before action is chosen
                     valid_actions_current = self.env.valid_actions(agent.get_state(), self.agents)
-                    action = agent.choose_action(valid_actions_current, pd_string, step)
+                    action = agent.choose_action(valid_actions_current, pd_string, step, episode, self.episode_based)
                     if verbose:
                         print(f"\033[91mAgent {idx}\033[0m {old_state}, Valid Actions: {valid_actions_current}")
                         self.agents[idx].display_q_values(pd_string)
@@ -112,7 +112,7 @@ class SimulationWorker(QObject):
                     new_state, new_has_item = agent.get_state()  # This is effectively 'next_state' for Q-value update
                     valid_actions_next = self.env.valid_actions(agent.get_state(), self.agents)
                     # next_action is only for SARSA as it needs the future action based on policy
-                    next_action = agent.choose_action(valid_actions_next, pd_string, step)
+                    next_action = agent.choose_action(valid_actions_next, pd_string, step, episode, self.episode_based)
                     # Update Q-values using 'old_state' as current and 'new_state' as next
                     agent.update_q_values(old_state, old_has_item, action, valid_actions_next, reward, new_state,
                                           new_has_item, pd_string, next_action)

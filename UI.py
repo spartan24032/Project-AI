@@ -138,7 +138,7 @@ class SimulationControl(QMainWindow):
         # Area to display added agents
         self.addedAgentsDisplay = QLabel("Added Agents: None")
         layout.addWidget(self.addedAgentsDisplay)
-
+        # override policy selection
         self.overridePolicyComboBox = QComboBox(self)
         self.overridePolicyComboBox.addItem("None")
         self.overridePolicyComboBox.addItem("PRandom")
@@ -149,12 +149,17 @@ class SimulationControl(QMainWindow):
         overridePolicyLayout = QHBoxLayout()
         overridePolicyLayout.addWidget(QLabel("Override Policy:"))
         overridePolicyLayout.addWidget(self.overridePolicyComboBox)
-        overridePolicyLayout.addWidget(QLabel(" until step: "))
+        overridePolicyLayout.addWidget(QLabel(" until step/episode: "))
         overridePolicyLayout.addWidget(self.overrideTerminationStepInput)
         self.overrideTerminationStepInput.setMaximumWidth(100)
-        overridePolicyLayout.addWidget(QLabel(" (will return to default after this step)"))
+        overridePolicyLayout.addWidget(QLabel(" (will return to default after this)"))
         overridePolicyLayout.addStretch()
         layout.addLayout(overridePolicyLayout)
+        self.overrideDisclaimer = QLabel(
+            "This will go to a step # in step-based simulation and an episode # in episode-based simulation"
+        )
+        self.overrideDisclaimer.setStyleSheet("color: #4a4a4a; font: italic;")
+        layout.addWidget(self.overrideDisclaimer)
 
         layout.addItem(QSpacerItem(50, 50))
         self.pickupDropoffLayout = QHBoxLayout()
