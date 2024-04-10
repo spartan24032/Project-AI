@@ -38,6 +38,7 @@ class SimulationControl(QMainWindow):
         self.addedAgents = []
         self.pickupCoords = []
         self.dropoffCoords = []
+        self.agentLabels = []
         self.initUI()
         self.masterskip = False
 
@@ -241,7 +242,7 @@ class SimulationControl(QMainWindow):
         self.qValuesLayout = QVBoxLayout(self.qValuesContainer)  # Use the container as the parent for the layout
 
         placeholderLabel = QLabel(
-            "Agent Q-values placeholder text...")
+            "Current Agent State and Q-Values")
         placeholderLabel.setStyleSheet("margin: 10px;")
         self.qValuesLayout.addWidget(placeholderLabel)
 
@@ -367,34 +368,41 @@ class SimulationControl(QMainWindow):
         if episode is not None:
             self.episodeLabel.setText(f"Episode: {episode}, Step: {step}")
 
-    def updateQValuesDisplay(self, agents):
-        # print("update Q-value display called")
-        while self.qValuesLayout.count():
-            child = self.qValuesLayout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
-
-        # For each agent, display its Q-values
-        for idx, agent in enumerate(agents):
+    # idx, agent_buffer, valid_actions_current, pd_string, action, reward
+    def updateQValuesDisplay(self, idx, agents, valid_actions, pd_string, action, reward):
+        if 0 <= idx < len(agents):
+            agent = agents[idx]  # Access the specific agent
             Q_dicts = agent.return_q_dicts()
             state, has_item = agent.get_state()
 
             # Initialize the text for this agent's Q-values display
-            q_values_text = f"Agent {idx} at {state}, with item: {has_item}\nQ-values:\n"
-            #print(f"Agent {idx} at {state}, with item: {has_item}\nQ-values:\n")
-
-            for action in agent.actions:
-                q_value = Q_dicts[5].get((state, has_item, action), "--")
+            q_values_text = (f"Agent {idx} at {state}, has item: {has_item}\n"
+                             f"Valid actions: {valid_actions}\n")
+            if pd_string != 5:
+                q_values_text += f"Complex_space2 P/D string: {pd_string}\n"
+            q_values_text += "Q-values:\n"
+            for action_key in agent.actions:
+                q_value = Q_dicts[pd_string].get((state, has_item, action_key), "--")
                 display_value = f"{q_value:.2f}" if q_value != "--" else "--"
-                q_values_text += f"    {action}: {display_value}\n"
+                q_values_text += f"    {action_key}: {display_value}\n"
+            q_values_text += f"policy chooses action: {action}, Reward: {reward}"
 
-            # Create a QLabel for this agent's Q-values and add it to the layout
-            agent_q_values_label = QLabel(q_values_text)
-            agent_q_values_label.setStyleSheet(
-                "margin: 5px; padding: 5px; border: 1px solid black; background-color: #fcba03;")
-            self.qValuesLayout.addWidget(agent_q_values_label)
+            # Update only the QLabel for the agent specified by idx
+            self.updateAgentLabel(idx, q_values_text)
 
         self.qValuesLayout.addStretch()  # Ensures content is top-aligned
+
+    def updateAgentLabel(self, idx, text):
+        # Check if the QLabel for this agent exists; if not, create it
+        if idx >= len(self.agentLabels):
+            for _ in range(len(self.agentLabels), idx + 1):
+                label = QLabel()
+                label.setStyleSheet("margin: 5px; padding: 5px; border: 1px solid black; background-color: #fcba03;")
+                self.qValuesLayout.addWidget(label)
+                self.agentLabels.append(label)
+
+        # Update the QLabel text for the specified agent
+        self.agentLabels[idx].setText(text)
 
     def onNextClicked(self):
         if self.simulationWorker:
