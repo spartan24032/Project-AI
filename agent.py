@@ -1,6 +1,7 @@
 # agent.py
 class Agent:
-    def __init__(self, actions, start_state, policy, learning_algorithm="Q-learning", alpha=0.5, gamma=0.5):
+    def __init__(self, actions, start_state, policy, learning_algorithm="Q-learning", alpha=0.5, gamma=0.5,
+                 override_policy=None, override_max_step=0):
         self.Q_dicts = {}
         self.learning_algorithm = learning_algorithm
         self.alpha = alpha
@@ -8,7 +9,11 @@ class Agent:
         self.actions = actions  # Possible actions
         self.state = start_state  # Agent's current state (position, has_item)
         self.reset_state = start_state
-        self.policy = policy
+
+        self.default_policy = policy
+        self.policy = policy  # Current policy in use
+        self.override_policy = override_policy
+        self.terminate_override_step = override_max_step
 
     def reset(self, pd_string):
         self.state = self.reset_state
@@ -46,10 +51,15 @@ class Agent:
             new_q = current_q + self.alpha * (reward + self.gamma * next_q - current_q)
             self.Q_dicts[pd_string][(state, has_item, action)] = new_q
 
-    def choose_action(self, valid_actions, pd_string):
+    def choose_action(self, valid_actions, pd_string, step):
         if pd_string not in self.Q_dicts:
             self.Q_dicts[pd_string] = {}
-        return self.policy(self.state, self.has_item, self.Q_dicts[pd_string], valid_actions)
+        action = self.policy(self.state, self.has_item, self.Q_dicts[pd_string], valid_actions)
+        if self.override_policy and self.terminate_override_step > step:
+            action = self.override_policy(self.state, self.has_item, self.Q_dicts[pd_string], valid_actions)
+            if self.terminate_override_step <= step: # Revert to default policy if override duration has elapsed
+                self.policy = self.default_policy
+        return action
 
     def return_q_dicts(self):
         return self.Q_dicts

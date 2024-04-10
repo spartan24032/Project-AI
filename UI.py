@@ -138,6 +138,24 @@ class SimulationControl(QMainWindow):
         # Area to display added agents
         self.addedAgentsDisplay = QLabel("Added Agents: None")
         layout.addWidget(self.addedAgentsDisplay)
+
+        self.overridePolicyComboBox = QComboBox(self)
+        self.overridePolicyComboBox.addItem("None")
+        self.overridePolicyComboBox.addItem("PRandom")
+        self.overridePolicyComboBox.addItem("PExploit")
+        self.overridePolicyComboBox.addItem("PGreedy")
+        self.overrideTerminationStepInput = QLineEdit(self)
+        self.overrideTerminationStepInput.setPlaceholderText("None")
+        overridePolicyLayout = QHBoxLayout()
+        overridePolicyLayout.addWidget(QLabel("Override Policy:"))
+        overridePolicyLayout.addWidget(self.overridePolicyComboBox)
+        overridePolicyLayout.addWidget(QLabel(" until step: "))
+        overridePolicyLayout.addWidget(self.overrideTerminationStepInput)
+        self.overrideTerminationStepInput.setMaximumWidth(100)
+        overridePolicyLayout.addWidget(QLabel(" (will return to default after this step)"))
+        overridePolicyLayout.addStretch()
+        layout.addLayout(overridePolicyLayout)
+
         layout.addItem(QSpacerItem(50, 50))
         self.pickupDropoffLayout = QHBoxLayout()
 
@@ -500,6 +518,21 @@ class SimulationControl(QMainWindow):
 
         # Setup agents
         agentInstances = []
+
+        override_text = self.overridePolicyComboBox.currentText()
+        override_policy = {
+            "None": None, "PGreedy": PGreedy, "PExploit": PExploit, "PRandom": PRandom
+        }.get(override_text, None)
+
+        termination_step_text = self.overrideTerminationStepInput.text().strip()
+        termination_step = 0
+        if termination_step_text:
+            try:
+                termination_step = int(termination_step_text)
+            except ValueError:
+                print("Invalid input for termination step, defaulting to 0")
+                termination_step = 0
+
         for agentConfig in self.addedAgents:
             start_state = self.parseCoordinateToTuple(agentConfig[0])
             policy = {"PGreedy": PGreedy, "PExploit": PExploit, "PRandom": PRandom}.get(agentConfig[1])
@@ -507,27 +540,24 @@ class SimulationControl(QMainWindow):
             alpha = float(agentConfig[3]) if agentConfig[3] else 0.7
             gamma = float(agentConfig[4]) if agentConfig[4] else 0.8
 
-            # Setup agents
-            agentInstances = []
-            for agentConfig in self.addedAgents:
-                start_state = self.parseCoordinateToTuple(agentConfig[0])
-                policy = {"PGreedy": PGreedy, "PExploit": PExploit, "PRandom": PRandom}.get(agentConfig[1])
-                learning_algorithm = agentConfig[2]
-                agent = Agent(
-                    env.actions,
-                    start_state=start_state,
-                    policy=policy,
-                    learning_algorithm=learning_algorithm,
-                    alpha=alpha,
-                    gamma=gamma
-                )
-                agentInstances.append(agent)
+            # actions, start_state, policy, learning_algorithm, alpha, gamma, override_policy, override_max_step
+            agent = Agent(
+                env.actions,
+                start_state=start_state,
+                policy=policy,
+                learning_algorithm=learning_algorithm,
+                alpha=alpha,
+                gamma=gamma,
+                override_policy=override_policy,
+                override_max_step=termination_step
+            )
+            agentInstances.append(agent)
 
         complex_world2 = self.complexWorldCheck.isChecked()
         episode_based = self.isEpisodeBased
         r = int(self.episodesOrStepsInput.text())
         # Run simulation
-        self.initWorldStateGrid(size, agentInstances, pickups,dropoffs)
+        self.initWorldStateGrid(size, agentInstances, pickups, dropoffs)
 
         # (self, agents, complex_world2, episode_based, r, sim_control)
         # Create the thread and worker

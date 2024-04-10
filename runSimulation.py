@@ -68,12 +68,10 @@ class SimulationWorker(QObject):
             if not self.episode_based:
                 print(f"--- Running One Simulation with {self.r} total steps --- ")
             total_reward = 0
-            step = -1
+            step = 0
             while( (self.episode_based == False and step < self.r) or (self.episode_based == True and not self.env.dropoffs_complete()) ):
-                #if not episode_based:
-                #   verbose = step % 10 == 0
-                # verbose = step % 1 == 0
-                step += 1
+                if not self.episode_based:
+                    verbose = step % 60 == 0
 
                 if verbose:
                     print(f"\nStep {step}")
@@ -82,7 +80,9 @@ class SimulationWorker(QObject):
                     agent_buffer = copy.deepcopy(self.agents)
                     environment_buffer = copy.deepcopy(self.env)
                     self.update_display.emit(agent_buffer, environment_buffer, episode, step, self.r)
+                    self.update_qtable_display.emit(agent_buffer)
                 actions_taken = []
+
                 for idx, agent in enumerate(self.agents):
                     if self.env.dropoffs_complete():
                         if verbose:
@@ -96,12 +96,14 @@ class SimulationWorker(QObject):
                     old_state, old_has_item = agent.get_state()
                     # Get valid actions for the CURRENT state, before action is chosen
                     valid_actions_current = self.env.valid_actions(agent.get_state(), self.agents)
-                    action = agent.choose_action(valid_actions_current, pd_string)
+                    action = agent.choose_action(valid_actions_current, pd_string, step)
                     if verbose:
                         print(f"\033[91mAgent {idx}\033[0m {old_state}, Valid Actions: {valid_actions_current}")
                         self.agents[idx].display_q_values(pd_string)
 
                     reward = self.env.step(agent, action)  # Perform the action, moving to the new state
+                    step += 1
+                    # print(f"step {step}")
                     total_reward += reward
                     pd_string = self.env.generate_pd_string(self.complex_world2)
                     if verbose:
@@ -110,25 +112,19 @@ class SimulationWorker(QObject):
                     new_state, new_has_item = agent.get_state()  # This is effectively 'next_state' for Q-value update
                     valid_actions_next = self.env.valid_actions(agent.get_state(), self.agents)
                     # next_action is only for SARSA as it needs the future action based on policy
-                    next_action = agent.choose_action(valid_actions_next, pd_string)
+                    next_action = agent.choose_action(valid_actions_next, pd_string, step)
                     # Update Q-values using 'old_state' as current and 'new_state' as next
                     agent.update_q_values(old_state, old_has_item, action, valid_actions_next, reward, new_state,
                                           new_has_item, pd_string, next_action)
 
                     actions_taken.append((idx, action, reward, new_state, valid_actions_current))
 
-                if self.skipTo is None:
-                    agents_buffer = copy.deepcopy(self.agents)
-                    self.update_qtable_display.emit(agents_buffer)
-
                 if not self.mskip:
                     if self.skipTo is not None:
                         if self.episode_based and episode > (int(self.skipTo) -1):
                             self.skipTo = None  # Reset skipping logic
-                            # self.sim_control.updateCurrentWorldDisplay(self.agents, env, episode, step, self.r)
                         elif not self.episode_based and step > (int(self.skipTo) - 1):
                             self.skipTo = None  # Reset skipping logic
-                            # self.sim_control.updateCurrentWorldDisplay(self.agents, env, episode, step, self.r)
                         continue
                     if self.paused:
                         while self.paused:

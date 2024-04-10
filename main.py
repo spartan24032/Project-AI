@@ -25,18 +25,19 @@ if __name__ == "__main__":
 
     complex_world2 = True  # This uses a different state for each config of dropoff and pickup.
                             # It is great at finding the optimal policy, but uses 64x memory.
-    episode_based = True  # This chooses if we are using episodes or steps to run the simulation
+    episode_based = False  # This chooses if we are using episodes or steps to run the simulation
                            # False = steps, True = episodes
     #  "r" will either be episodes to run or total steps to run, depending on this value.
 
     a = env.actions
     agents = [
         # alpha = learning rate , gamma = discount factor
-        Agent(a, start_state=(0,0), policy=PExploit, learning_algorithm="Q-learning", alpha=0.7, gamma=0.8),
+        Agent(a, start_state=(0,0), policy=PExploit, learning_algorithm="Q-learning", alpha=0.7, gamma=0.8,
+              override_policy=PRandom, override_max_step=10),
         #Agent(a, start_state=(1,1), policy = PExploit, alpha=0.5, gamma=0.3),
         #Agent(a, start_state=(4,4), policy=PExploit, alpha=0.3, gamma=0.5)
     ]
-    r = 5
+    r = 50
     sim_control = MockSimulationControl() # This is a mock control class that does nothing, allows code to run without UI
     simulationWorker = SimulationWorker(agents, env, complex_world2, episode_based, r, mskip = True)
     simulationWorker.run_simulation()
