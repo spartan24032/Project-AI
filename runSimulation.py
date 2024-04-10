@@ -1,5 +1,10 @@
 # runSimulation.py
 import time
+def reset_locations(agents):
+    for agent in agents:
+        agent.reset_2()
+
+
 
 def run_simulation(agents, env, sim_control, complex_world2=False, episode_based=True, r=200):
 
@@ -29,8 +34,8 @@ def run_simulation(agents, env, sim_control, complex_world2=False, episode_based
             #   verbose = step % 10 == 0
             verbose = step % 1 == 0
             step += 1
-            if sim_control.skip_to_step is None:
-                sim_control.updateCurrentWorldDisplay(agents, env, episode, step, r)
+            # if sim_control.skip_to_step is None:
+            #     sim_control.updateCurrentWorldDisplay(agents, env, episode, step, r)
             if verbose:
                 print(f"\nStep {step}")
                 env.render(agents)
@@ -42,6 +47,10 @@ def run_simulation(agents, env, sim_control, complex_world2=False, episode_based
                         print(f"\nStep {step + 1}")
                         env.render(agents)
                         print(f"All dropoffs complete.\nTotal Reward for Episode {episode + 1}: {total_reward}\n")
+                        reset_locations(agents)
+                        env.reset()
+                        time.sleep(5)
+                        #exit()
                     break
                 if not episode_based and step > r or env.dropoffs_complete():
                     print("reached max steps OR completed all dropoffs, killing program")
@@ -70,21 +79,21 @@ def run_simulation(agents, env, sim_control, complex_world2=False, episode_based
 
                 actions_taken.append((idx, action, reward, new_state, valid_actions_current))
 
-            if not sim_control.masterskip:
-                # Skip functionality
-                if sim_control.skip_to_step is not None:
-                    print(f"skip to step/episode enabled, skipping to {sim_control.skip_to_step}")
-                    if episode_based and episode >= (int(sim_control.skip_to_step)):
-                        sim_control.skip_to_step = None  # Reset skipping logic
-                        sim_control.updateCurrentWorldDisplay(agents, env, episode, step, r)
-                    elif not episode_based and step >= (int(sim_control.skip_to_step)-1):
-                        sim_control.skip_to_step = None  # Reset skipping logic
-                        sim_control.updateCurrentWorldDisplay(agents, env, episode, step, r)
-                    continue  # Proceed to the next iteration without executing further actions
-                if sim_control.autoplay_enabled:
-                    print("autoplay enabled")
-                    time.sleep(5.0 / sim_control.speedSlider.value())  # Adjust based on the speed slider
-                else:
-                    print("waiting on next step signal")
-                    sim_control.next_step_event.wait()  # Wait for the next step signal
-                    sim_control.next_step_event.clear()  # Reset the event for the next iteration
+            # if not sim_control.masterskip:
+            #     # Skip functionality
+            #     if sim_control.skip_to_step is not None:
+            #         print(f"skip to step/episode enabled, skipping to {sim_control.skip_to_step}")
+            #         if episode_based and episode >= (int(sim_control.skip_to_step)):
+            #             sim_control.skip_to_step = None  # Reset skipping logic
+            #             sim_control.updateCurrentWorldDisplay(agents, env, episode, step, r)
+            #         elif not episode_based and step >= (int(sim_control.skip_to_step)-1):
+            #             sim_control.skip_to_step = None  # Reset skipping logic
+            #             sim_control.updateCurrentWorldDisplay(agents, env, episode, step, r)
+            #         continue  # Proceed to the next iteration without executing further actions
+            #     if sim_control.autoplay_enabled:
+            #         print("autoplay enabled")
+            #         time.sleep(5.0 / sim_control.speedSlider.value())  # Adjust based on the speed slider
+            #     else:
+            #         print("waiting on next step signal")
+            #         sim_control.next_step_event.wait()  # Wait for the next step signal
+            #         sim_control.next_step_event.clear()  # Reset the event for the next iteration
