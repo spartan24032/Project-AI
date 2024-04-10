@@ -9,3 +9,4 @@
 .idea/inspectionProfiles/Project_Default.xml
 __pycache__
 Agent_*.xlsx
+agents_q_tables*.xlsx
