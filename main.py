@@ -22,7 +22,7 @@ if __name__ == "__main__":
     
     env = GridWorld(size, pickups, dropoffs, dropoffCapacity)
 
-    complex_world2 = False # This uses a different state for each config of dropoff and pickup.
+    complex_world2 = True # This uses a different state for each config of dropoff and pickup.
                             # It is great at finding the optimal policy, but uses 64x memory.
     episode_based = False  # This chooses if we are using episodes or steps to run the simulation
                            # False = steps, True = episodes
@@ -37,43 +37,13 @@ if __name__ == "__main__":
     ]
     sim_control = MockSimulationControl() # This is a mock control class that does nothing, allows code to run without UI
     run_simulation(agents, env, sim_control, complex_world2, episode_based, r=3000)
-# policy = "Prandom"
-
-# for num,agent in enumerate(agents):
-#     for q_table in agent.Q_dicts.keys():
-#         Actions =['S','E','W','N','P','D']
-#         #Create df 
-#         cols=['Location','Has_Block','S','E','W','N','P','D']
-#         df = pd.DataFrame({name:[] for name in cols})
-#         #print(agents[0].Q_dicts['111111'])
-
-#         for row in range(5):
-#             for col in range(5):
-#                 location = (row, col)
-#                 for has_block in [True,False]:
-#                         #print((location,has_block,action))
-#                         new_row = dict()
-#                         new_row['Location'] = str(location)
-#                         #print(has_block)
-#                         new_row['Has_Block'] = 1 if has_block else 0
-#                         for action in cols[2:]:
-#                             new_row[action] = round(agent.Q_dicts[q_table].get((location,has_block,action),0),2)
-#                         df.loc[len(df)]= new_row
-#                         df = df.reset_index(drop=True)
-#                         #print(action,agents[0].Q_dicts['111111'].get((location,has_block,action),0),end=" ")
-#         #print(df.head(50))
-#         name ='Agent_'+str(num)+"_"+ str(q_table)+'.xlsx'
-#         df.to_excel(name)
-
-# Assuming agents is a list of agents
-
-# Create an Excel writer object
+#print(agents[0].Q_dicts['111111'])
 excel_writer = pd.ExcelWriter('agents_q_tables_PRANDOM_500_PRANDOM_8500.xlsx', engine='xlsxwriter')
 
 for num, agent in enumerate(agents):
     for q_table in agent.Q_dicts.keys():
-        Actions = ['S', 'E', 'W', 'N', 'P', 'D']
-        cols = ['Location', 'Has_Block', 'S', 'E', 'W', 'N', 'P', 'D']
+        Actions = ['S', 'E', 'W', 'N', 'pickup', 'dropoff']
+        cols = ['Location', 'Has_Block', 'S', 'E', 'W', 'N', 'pickup', 'dropoff']
         df = pd.DataFrame(columns=cols)
 
         for row in range(5):
@@ -81,7 +51,7 @@ for num, agent in enumerate(agents):
                 location = (row, col)
                 for has_block in [True, False]:
                     new_row = {'Location': str(location), 'Has_Block': 1 if has_block else 0}
-                    for action in cols[2:]:
+                    for action in Actions:
                         new_row[action] = round(agent.Q_dicts[q_table].get((location, has_block, action), 0), 2)
                     df.loc[len(df)]= new_row
                     df = df.reset_index(drop=True)
