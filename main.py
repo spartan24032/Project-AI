@@ -4,6 +4,8 @@ from agent import Agent
 from policies import PRandom, PExploit, PGreedy
 from runSimulation import run_simulation
 import random
+import pandas as pd
+import numpy as np
 from UI import MockSimulationControl
 
 if __name__ == "__main__":
@@ -34,21 +36,31 @@ if __name__ == "__main__":
         Agent(a, start_state=(0,2), policy=PRandom, learning_algorithm="Q-learning", alpha=0.3, gamma=0.5)
     ]
     sim_control = MockSimulationControl() # This is a mock control class that does nothing, allows code to run without UI
-    run_simulation(agents, env, sim_control, complex_world2, episode_based, r=30)
-    Actions =['S','E','W','N','P','D']
-    Agent_Action_State = dict()
-    for num,agent in enumerate(agents):
-        #print(num)
-        for dict_agent in agent.Q_dicts.keys():
-            for element in agent.Q_dicts[dict_agent]:
-                Action = element[2]
-                Q_value = agent.Q_dicts[dict_agent][element]
-                try:
-                    Agent_Action_State[(dict_agent,Action)].append((element,Q_value))
-                except KeyError:
-                    Agent_Action_State[(dict_agent,Action)] =[(element,Q_value)]
-All_S = Agent_Action_State[('111111', 'S')]
-All_S.sort( key = lambda x:x[0][0])
-for element in All_S:
-    print(element[0][0],round(element[1],2))
+    run_simulation(agents, env, sim_control, complex_world2, episode_based, r=3000)
+policy = "Prandom"
 
+for num,agent in enumerate(agents):
+    for q_table in agent.Q_dicts.keys():
+        Actions =['S','E','W','N','P','D']
+        #Create df 
+        cols=['Location','Has_Block','S','E','W','N','P','D']
+        df = pd.DataFrame({name:[] for name in cols})
+        #print(agents[0].Q_dicts['111111'])
+
+        for row in range(5):
+            for col in range(5):
+                location = (row, col)
+                for has_block in [True,False]:
+                        #print((location,has_block,action))
+                        new_row = dict()
+                        new_row['Location'] = str(location)
+                        #print(has_block)
+                        new_row['Has_Block'] = 1 if has_block else 0
+                        for action in cols[2:]:
+                            new_row[action] = round(agent.Q_dicts[q_table].get((location,has_block,action),0),2)
+                        df.loc[len(df)]= new_row
+                        df = df.reset_index(drop=True)
+                        #print(action,agents[0].Q_dicts['111111'].get((location,has_block,action),0),end=" ")
+        #print(df.head(50))
+        name ='Agent_'+str(num)+"_"+ str(q_table)+'.xlsx'
+        df.to_excel(name)

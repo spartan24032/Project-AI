@@ -49,7 +49,7 @@ def run_simulation(agents, env, sim_control, complex_world2=False, episode_based
                         print(f"All dropoffs complete.\nTotal Reward for Episode {episode + 1}: {total_reward}\n")
                         reset_locations(agents)
                         env.reset()
-                        time.sleep(5)
+                        #time.sleep(5)
                         #exit()
                     break
                 if not episode_based and step > r or env.dropoffs_complete():
