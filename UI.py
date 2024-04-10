@@ -2,12 +2,14 @@ import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import QThread, pyqtSignal
+
 import threading
-import math
 from environment import GridWorld
 from agent import Agent
 from policies import PRandom, PExploit, PGreedy
-from runSimulation import run_simulation
+from runSimulation import SimulationWorker
 import random
 
 # Example preset data
@@ -20,20 +22,23 @@ PRESET_PICKUPS = ["(0,4)", "(1,3)", "(4,1)"]
 PRESET_DROPOFFS = ["(0,0)", "(2,0)", "(3,4)"]
 PRESET_WORLDSIZE = '5'
 
+"""
+qThreading and the agent/worker relationship idea is sourced from
+https://realpython.com/python-pyqt-qthread/
+"""
+
 class SimulationControl(QMainWindow):
+    #self.agents, env, episode, step, self.r
+    update_display_signal = pyqtSignal(object, object, int, int, int)
+    #self, agents
+    update_qTable_signal = pyqtSignal(object)
+
     def __init__(self):
         super().__init__()
         self.addedAgents = []
         self.pickupCoords = []
         self.dropoffCoords = []
         self.initUI()
-
-        # Event to signal proceeding to the next step
-        self.next_step_event = threading.Event()
-        # Condition to manage autoplay and skip functionality
-        self.autoplay_condition = threading.Condition()
-        self.autoplay_enabled = False
-        self.skip_to_step = None
         self.masterskip = False
 
     def initUI(self):
@@ -251,11 +256,11 @@ class SimulationControl(QMainWindow):
         # Slider for controlling autoplay speed
         self.speedSlider = QSlider(Qt.Horizontal)
         self.speedSlider.setMinimum(1)
-        self.speedSlider.setMaximum(50)
-        self.speedSlider.setValue(25)  # Default value
+        self.speedSlider.setMaximum(20)
+        self.speedSlider.setValue(15)  # Default value
 
         # Label to display slider value
-        self.speedValueLabel = QLabel("25")  # Initialize with default slider value
+        self.speedValueLabel = QLabel("15")  # Initialize with default slider value
         self.speedSlider.valueChanged.connect(self.updateSpeedValue)  # Connect signal to slot
 
         # Layout adjustments to include the slider and its value label
@@ -298,9 +303,11 @@ class SimulationControl(QMainWindow):
 
         self.worldStateContainer.setFixedSize(700, 700)
 
-    def updateCurrentWorldDisplay(self, agents, env, ep, step, r):
+    def updateDisplay(self, agents, env, ep, step, r):
+        # print("updating display")
+        # print(agents[0].get_state())
         if ep is not None:
-            self.episodeLabel.setText(f"Episode: {ep}/{r}, Step: {step}")
+            self.episodeLabel.setText(f"Episode: {ep+1}/{r}, Step: {step}")
         size, actions, dropoffStorage, pickups, dropoffs, used_dropoffs = env.UIrenderVals()
         for row in range(size):
             for col in range(size):
@@ -331,14 +338,14 @@ class SimulationControl(QMainWindow):
 
                 cell_label.setText(base_content)
                 cell_label.setStyleSheet(cell_style)
-        self.updateQValuesDisplay(agents)
+        # self.updateQValuesDisplay(agents)
 
     def updateSimulationDisplay(self, episode=None, step=None):
         if episode is not None:
             self.episodeLabel.setText(f"Episode: {episode}, Step: {step}")
 
     def updateQValuesDisplay(self, agents):
-        print("update Q-value display called")
+        # print("update Q-value display called")
         while self.qValuesLayout.count():
             child = self.qValuesLayout.takeAt(0)
             if child.widget():
@@ -367,21 +374,34 @@ class SimulationControl(QMainWindow):
         self.qValuesLayout.addStretch()  # Ensures content is top-aligned
 
     def onNextClicked(self):
-        print("next clicked, setting next_step_event")
-        self.next_step_event.set()
+        if self.simulationWorker:
+            self.simulationWorker.requestNext.emit()
 
     def onPlayClicked(self):
-        with self.autoplay_condition:
-            self.autoplay_enabled = True
-            self.autoplay_condition.notify()
-        self.next_step_event.set()
+        self.playBtn.setEnabled(False)
+        self.nextBtn.setEnabled(False)
+        self.speedSlider.setEnabled(False)
+        self.skipBtn.setEnabled(False)
+        self.skipInput.setEnabled(False)
+        if self.simulationWorker:
+            speed = int(self.speedSlider.value())
+            self.simulationWorker.requestPlay.emit(speed)
 
     def onPauseClicked(self):
-        self.autoplay_enabled = False
+        self.playBtn.setEnabled(True)
+        self.nextBtn.setEnabled(True)
+        self.speedSlider.setEnabled(True)
+        self.skipBtn.setEnabled(True)
+        self.skipInput.setEnabled(True)
+        if self.simulationWorker:
+            self.simulationWorker.requestPause.emit()
 
     def onSkipClicked(self):
-        self.skip_to_step = self.skipInput.text()
-        self.next_step_event.set()
+        if self.simulationWorker:
+            skips = int(self.skipInput.text())
+            # print(f"sending skip signal with {skips}")
+            self.simulationWorker.requestSkip.emit(skips)
+            self.simulationWorker.requestNext.emit()
 
     def updateSpeedValue(self, value):
         self.speedValueLabel.setText(str(value))
@@ -460,7 +480,8 @@ class SimulationControl(QMainWindow):
             self.addedAgentsDisplay.setStyleSheet("color: #293BFF")
 
     def onCreateAndRunClicked(self):
-
+        self.tabs.setCurrentIndex(self.tabs.indexOf(self.simulationControlTab))
+        # print("createandRun clicked, switching tabs")
         # Assuming you have a method to parse coordinates from UI inputs
         size = int(self.worldSizeInput.text())
         try:
@@ -507,12 +528,24 @@ class SimulationControl(QMainWindow):
         r = int(self.episodesOrStepsInput.text())
         # Run simulation
         self.initWorldStateGrid(size, agentInstances, pickups,dropoffs)
-        # Create a thread to run the simulation without blocking the UI
-        simulationThread = threading.Thread(target=run_simulation,
-                                                 args=(agentInstances, env, self, complex_world2, episode_based, r))
-        simulationThread.start()
-        # Optionally, switch to the "Simulation Control" tab
-        self.tabs.setCurrentIndex(self.tabs.indexOf(self.simulationControlTab))
+
+        # (self, agents, complex_world2, episode_based, r, sim_control)
+        # Create the thread and worker
+        self.simulationThread = QThread()
+        self.simulationWorker = SimulationWorker(agentInstances, env, complex_world2, episode_based, r, False)
+        self.simulationWorker.moveToThread(self.simulationThread)
+
+        # Connect signals and slots
+        self.simulationThread.started.connect(self.simulationWorker.run_simulation)
+        self.simulationWorker.finished.connect(self.simulationThread.quit)
+        self.simulationWorker.finished.connect(self.simulationWorker.deleteLater)
+        self.simulationThread.finished.connect(self.simulationThread.deleteLater)
+        self.simulationWorker.update_display.connect(self.updateDisplay)
+        self.simulationWorker.update_qtable_display.connect(self.updateQValuesDisplay)
+
+        # Start the simulation thread
+        self.simulationThread.start()
+
 
     def initBlankWorldPreview(self, size, agents=[], pickups=[], dropoffs=[]):
         self.clearLayout(self.worldPreviewLayout)
@@ -529,7 +562,7 @@ class SimulationControl(QMainWindow):
                 cellLabel.setStyleSheet("border: 1px solid black;")
                 cellLabel.setFixedSize(80, 80)  # Increased size for better visibility and to fit the coordinate
                 if (row, col) in agents:
-                    print("Agent at", row, col)
+                    # print("Agent at", row, col)
                     cellLabel.setText("Agent")
                     cellLabel.setStyleSheet("color: blue; font-size: 20px; border: 1px solid black;")
                 elif (row, col) in pickups:
@@ -605,7 +638,6 @@ class MockSimulationControl:
         # Since this mock class is for running without UI, we don't actually wait for any events.
         self.next_step_event = threading.Event()
         self.masterskip = True
-        self.skip_to_step = False
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

@@ -2,7 +2,10 @@
 from environment import GridWorld
 from agent import Agent
 from policies import PRandom, PExploit, PGreedy
-from runSimulation import run_simulation
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import QCoreApplication, QThread
+import sys
+from runSimulation import SimulationWorker
 import random
 from UI import MockSimulationControl
 
@@ -33,5 +36,7 @@ if __name__ == "__main__":
         #Agent(a, start_state=(1,1), policy = PExploit, alpha=0.5, gamma=0.3),
         #Agent(a, start_state=(4,4), policy=PExploit, alpha=0.3, gamma=0.5)
     ]
+    r = 5
     sim_control = MockSimulationControl() # This is a mock control class that does nothing, allows code to run without UI
-    run_simulation(agents, env, sim_control, complex_world2, episode_based, r=300)
+    simulationWorker = SimulationWorker(agents, env, complex_world2, episode_based, r, mskip = True)
+    simulationWorker.run_simulation()
