@@ -6,7 +6,13 @@ from runSimulation import run_simulation
 import random
 from UI import MockSimulationControl
 
+from UI import SimulationControl
+import sys
+from PyQt5.QtWidgets import QApplication
+
 if __name__ == "__main__":
+    app = QApplication(sys.argv)  # Create an instance of QApplication
+
     # Define the environment
     random.seed(5)
     dropoffCapacity = 5
@@ -33,5 +39,8 @@ if __name__ == "__main__":
         #Agent(a, start_state=(1,1), policy = PExploit, alpha=0.5, gamma=0.3),
         #Agent(a, start_state=(4,4), policy=PExploit, alpha=0.3, gamma=0.5)
     ]
-    sim_control = MockSimulationControl() # This is a mock control class that does nothing, allows code to run without UI
+    # sim_control = MockSimulationControl() # This is a mock control class that does nothing, allows code to run without UI
+    sim_control = SimulationControl() # This is a mock control class that does nothing, allows code to run without UI
+    sim_control.show()  # Show the main window
+    sys.exit(app.exec_())  # Start the event loop and wait for exit
     run_simulation(agents, env, sim_control, complex_world2, episode_based, r=300)
