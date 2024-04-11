@@ -89,7 +89,9 @@ class SimulationWorker(QObject):
                 agent_buffer = copy.deepcopy(self.agents)
                 environment_buffer = copy.deepcopy(self.env)
                 pd_buffer = copy.deepcopy(pd_string)
-                self.update_display.emit(agent_buffer, environment_buffer, episode, step, self.r, self.episode_based, self.totalsteps)
+                self.update_display.emit(
+                    agent_buffer, environment_buffer, episode, step, self.r, self.episode_based, self.totalsteps
+                )
             actions_taken = []
 
             for idx, agent in enumerate(self.agents):
@@ -112,6 +114,7 @@ class SimulationWorker(QObject):
                     print(f"  selecting: {action}, Reward: {reward}")
                 if self.skipTo is None:
                     self.update_qtable_display.emit(idx, agent_buffer, valid_actions_current, pd_buffer, action, reward)
+
                 # Now, get valid actions for the NEW state, after action is performed
                 new_state, new_has_item = agent.get_state()  # This is effectively 'next_state' for Q-value update
                 valid_actions_next = self.env.valid_actions(agent.get_state(), self.agents)

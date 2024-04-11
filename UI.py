@@ -40,6 +40,7 @@ class SimulationControl(QMainWindow):
         self.agentLabels = []
         self.initUI()
         self.masterskip = False
+        self.created = False
 
     def initUI(self):
         self.setWindowTitle('Simulation Control')
@@ -60,6 +61,13 @@ class SimulationControl(QMainWindow):
         self.qTableTab = QWidget()
         self.tabs.addTab(self.qTableTab, "Charts and Data")
         self.initChartsDataTab()
+        self.tabs.currentChanged.connect(self.onTabChange)
+
+    def onTabChange(self, index):
+        if self.created:
+            self.onPauseClicked()
+        if self.tabs.widget(index) == self.qTableTab:
+            self.populateComboboxes()
 
     def initWorldCreationTab(self):
         layout = QVBoxLayout()
@@ -306,21 +314,17 @@ class SimulationControl(QMainWindow):
         self.speedSlider.setEnabled(False)
 ######
     def initChartsDataTab(self):
-        layout = QVBoxLayout()
+        mainLayout = QVBoxLayout(self.qTableTab)
+        self.nestedTabs = QTabWidget()
+        mainLayout.addWidget(self.nestedTabs)
 
-        self.agentSelectCombo = QComboBox()
-        #self.agentSelectCombo.currentIndexChanged.connect(self.updatePdStringDropdown)
-        layout.addWidget(self.agentSelectCombo)
+        self.qTablesDisplayTab = QWidget()
+        self.nestedTabs.addTab(self.qTablesDisplayTab, "Q-Tables")
 
-        self.pdStringSelectCombo = QComboBox()
-        #self.pdStringSelectCombo.currentIndexChanged.connect(self.displaySelectedQTable)
-        layout.addWidget(self.pdStringSelectCombo)
+        self.graphsTab = QWidget()
+        self.nestedTabs.addTab(self.graphsTab, "Graphs")
 
-        self.qTableDisplay = QTextEdit()
-        self.qTableDisplay.setReadOnly(True)
-        layout.addWidget(self.qTableDisplay)
-
-        self.qTableTab.setLayout(layout)
+        self.setupQTablesDisplayTab()
 
 ######################################################################
     def initWorldStateGrid(self, size, agents=[], pickups=[], dropoffs=[]):
@@ -351,13 +355,12 @@ class SimulationControl(QMainWindow):
         self.worldStateContainer.setFixedSize(700, 700)
 
     def updateDisplay(self, agents, env, ep, step, r, ep_based, totalsteps):
-        # print("updating display")
-        # print(agents[0].get_state())
         if ep_based:
             self.episodeLabel.setText(f"Episode: {ep}/{r}, Step: {step}, Total Steps: {totalsteps}")
         else:
             self.episodeLabel.setText(f"Step: {totalsteps}/{r}, Episode: #{ep} (total runs completed)")
         size, actions, dropoffStorage, pickups, dropoffs, used_dropoffs = env.UIrenderVals()
+        # self.populateComboboxes()
         for row in range(size):
             for col in range(size):
                 cell_label = self.worldStateGrid.itemAtPosition(row, col).widget()
@@ -387,11 +390,6 @@ class SimulationControl(QMainWindow):
 
                 cell_label.setText(base_content)
                 cell_label.setStyleSheet(cell_style)
-        # self.updateQValuesDisplay(agents)
-
-    def updateSimulationDisplay(self, episode=None, step=None):
-        if episode is not None:
-            self.episodeLabel.setText(f"Episode: {episode}, Step: {step}")
 
     # idx, agent_buffer, valid_actions_current, pd_string, action, reward
     def updateQValuesDisplay(self, idx, agents, valid_actions, pd_string, action, reward):
@@ -407,7 +405,10 @@ class SimulationControl(QMainWindow):
                 q_values_text += f"Complex_space2 P/D string: {pd_string}\n"
             q_values_text += "Q-values:\n"
             for action_key in agent.actions:
-                q_value = Q_dicts[pd_string].get((state, has_item, action_key), "--")
+                try:
+                    q_value = Q_dicts[pd_string].get((state, has_item, action_key), "--")
+                except:
+                    return
                 display_value = f"{q_value:.2f}" if q_value != "--" else "--"
                 q_values_text += f"    {action_key}: {display_value}\n"
             q_values_text += f"policy chooses action: {action}, Reward: {reward}"
@@ -537,8 +538,6 @@ class SimulationControl(QMainWindow):
 
     def onCreateAndRunClicked(self):
         self.tabs.setCurrentIndex(self.tabs.indexOf(self.simulationControlTab))
-        # print("createandRun clicked, switching tabs")
-        # Assuming you have a method to parse coordinates from UI inputs
         size = int(self.worldSizeInput.text())
         try:
             randomSeed = int(self.randomSeedInput.text())
@@ -619,7 +618,7 @@ class SimulationControl(QMainWindow):
         self.skipInput.setEnabled(True)
         self.skipBtn.setEnabled(True)
         self.speedSlider.setEnabled(True)
-
+        self.created = True
 
     def initBlankWorldPreview(self, size, agents=[], pickups=[], dropoffs=[]):
         self.clearLayout(self.worldPreviewLayout)
@@ -708,39 +707,69 @@ class SimulationControl(QMainWindow):
         self.onPreviewWorldClicked()
 
 #########
-    def populateAgentDropdown(self, agents):
+    def setupQTablesDisplayTab(self):
+        self.q_tables = {
+            "Agent 1": {
+                "pd_string1": {("1,2", False, "Action1"): -1, ("State1", False, "Action2"): -2},
+                "pd_string2": {("State1", True, "Action1"): 1, ("State1", True, "Action2"): 2},
+            },
+            "Agent 2": {
+                "pd_string1": {("State2", False, "Action1"): -3, ("State2", False, "Action2"): -4},
+                "pd_string2": {("State2", True, "Action1"): 3, ("State2", True, "Action2"): 4},
+            }
+        }
+        layout = QVBoxLayout()
+
+        self.agentSelectCombo = QComboBox()
+        layout.addWidget(self.agentSelectCombo)
+
+        self.pdStringSelectCombo = QComboBox()
+        layout.addWidget(self.pdStringSelectCombo)
+
+        self.qTableWidget = QTableWidget()
+        self.qTableWidget.setRowCount(0)  # Start with no rows
+        self.qTableWidget.setColumnCount(4)  # Assuming columns: State (x,y), Has Item, Action, Value
+        self.qTableWidget.setHorizontalHeaderLabels(['State', 'Has Item', 'Action', 'Value'])
+        layout.addWidget(self.qTableWidget)
+
+        self.qTablesDisplayTab.setLayout(layout)
+        self.populateComboboxes()
+
+    def populateComboboxes(self):
+        # Clear existing items
         self.agentSelectCombo.clear()
-        for index, agent in enumerate(agents):
-            self.agentSelectCombo.addItem(f"Agent {index}", agent)
+        self.agentSelectCombo.addItems(self.q_tables.keys())  # Adding agent names to the combobox
 
-    def updatePdStringDropdown(self, index):
-        agent = self.agentSelectCombo.itemData(index)
-        if agent:
-            # Assuming agents have a method get_pd_strings() that returns a list of strings
-            pd_strings = agent.get_pd_strings()
-            self.pdStringSelectCombo.clear()
-            for pd_string in pd_strings:
-                self.pdStringSelectCombo.addItem(pd_string)
+        # Connect signals to slots to update the pd_string dropdown and display the Q-table
+        self.agentSelectCombo.currentIndexChanged.connect(self.updatePdStringDropdown)
+        self.pdStringSelectCombo.currentIndexChanged.connect(self.displayQTable)
+
+        # Initially populate pd_string combobox and display Q-table for the first selections
+        self.updatePdStringDropdown()
+
+    def updatePdStringDropdown(self):
+        # Clear and repopulate the pd_string combobox based on selected agent
+        self.pdStringSelectCombo.clear()
+        selected_agent = self.agentSelectCombo.currentText()
+        if selected_agent in self.q_tables:
+            pd_strings = self.q_tables[selected_agent].keys()
+            self.pdStringSelectCombo.addItems(pd_strings)
+            self.displayQTable()
+
+    def displayQTable(self):
+        selected_agent = self.agentSelectCombo.currentText()
+        pd_string = self.pdStringSelectCombo.currentText()
+        if selected_agent and pd_string:
+            qtable = self.q_tables[selected_agent].get(pd_string, {})
+            self.qTableWidget.setRowCount(len(qtable))
+            for row, ((state, has_item, action), value) in enumerate(qtable.items()):
+                self.qTableWidget.setItem(row, 0, QTableWidgetItem(str(state)))
+                self.qTableWidget.setItem(row, 1, QTableWidgetItem(str(has_item)))
+                self.qTableWidget.setItem(row, 2, QTableWidgetItem(str(action)))
+                self.qTableWidget.setItem(row, 3, QTableWidgetItem(str(value)))
+            self.qTableWidget.resizeColumnsToContents()
         else:
-            self.pdStringSelectCombo.clear()
-
-    def displaySelectedQTable(self):
-        agentIndex = self.agentSelectCombo.currentIndex()
-        pdString = self.pdStringSelectCombo.currentText()
-        agent = self.agentSelectCombo.itemData(agentIndex)
-        if agent and pdString:
-            q_table_text = self.formatQTableForDisplay(agent, pdString)
-            self.qTableDisplay.setText(q_table_text)
-
-    def formatQTableForDisplay(self, agent, pd_string):
-        # Fetch the Q-table from the agent using pd_string
-        # Format it as a string for display
-        q_table_text = "Q-Table\n"
-        Q_dicts = agent.return_q_dicts()  # Assuming this method returns the Q-tables
-        for state, has_item, action in Q_dicts.get(pd_string, {}):
-            q_value = Q_dicts[pd_string].get((state, has_item, action), 'N/A')
-            q_table_text += f"State: {state}, Has Item: {has_item}, Action: {action} -> Q-value: {q_value}\n"
-        return q_table_text
+            self.qTableWidget.setRowCount(0)
 
 #########
 class MockSimulationControl:
