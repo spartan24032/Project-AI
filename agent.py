@@ -72,7 +72,7 @@ class Agent:
         return self.Q_dicts
 
     def display_q_values(self, pd_string):
-        if pd_string == 5:
+        if pd_string == '5':
             print(f"  Q-values:")
         else:
             print(f"  Q-values (using complex state2, P/D states: {pd_string})")

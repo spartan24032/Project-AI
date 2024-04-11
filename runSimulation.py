@@ -8,7 +8,7 @@ class SimulationWorker(QObject):
     # self.agents, env, episode, step, self.r
     update_display = pyqtSignal(object, object, int, int, int)
     # idx, agent_buffer, valid_actions_current, pd_string, action, reward
-    update_qtable_display = pyqtSignal(int, object, list, int, str, int)
+    update_qtable_display = pyqtSignal(int, object, list, str, str, int)
     requestPause = pyqtSignal()
     requestPlay = pyqtSignal(int)
     requestNext = pyqtSignal()
@@ -78,9 +78,11 @@ class SimulationWorker(QObject):
                 if verbose:
                     print(f"\nStep {step}")
                     self.env.render(self.agents)
+                pd_string = self.env.generate_pd_string(self.complex_world2)
                 if self.skipTo is None:
                     agent_buffer = copy.deepcopy(self.agents)
                     environment_buffer = copy.deepcopy(self.env)
+                    pd_buffer = copy.deepcopy(pd_string)
                     self.update_display.emit(agent_buffer, environment_buffer, episode, step, self.r)
                 actions_taken = []
 
@@ -101,16 +103,14 @@ class SimulationWorker(QObject):
                     if verbose:
                         print(f"\033[91mAgent {idx}\033[0m {old_state}, Valid Actions: {valid_actions_current}")
                         self.agents[idx].display_q_values(pd_string)
-
                     reward = self.env.step(agent, action)  # Perform the action, moving to the new state
                     step += 1
                     # print(f"step {step}")
                     total_reward += reward
-                    pd_string = self.env.generate_pd_string(self.complex_world2)
                     if verbose:
                         print(f"  selecting: {action}, Reward: {reward}")
                     if self.skipTo is None:
-                        self.update_qtable_display.emit(idx, agent_buffer, valid_actions_current, pd_string, action, reward)
+                        self.update_qtable_display.emit(idx, agent_buffer, valid_actions_current, pd_buffer, action, reward)
                     # Now, get valid actions for the NEW state, after action is performed
                     new_state, new_has_item = agent.get_state()  # This is effectively 'next_state' for Q-value update
                     valid_actions_next = self.env.valid_actions(agent.get_state(), self.agents)

@@ -30,8 +30,6 @@ https://realpython.com/python-pyqt-qthread/
 class SimulationControl(QMainWindow):
     #self.agents, env, episode, step, self.r
     update_display_signal = pyqtSignal(object, object, int, int, int)
-    #self, agents
-    update_qTable_signal = pyqtSignal(object)
 
     def __init__(self):
         super().__init__()
@@ -41,6 +39,7 @@ class SimulationControl(QMainWindow):
         self.agentLabels = []
         self.initUI()
         self.masterskip = False
+        self.past_pd_string = ''
 
     def initUI(self):
         self.setWindowTitle('Simulation Control')
@@ -369,7 +368,11 @@ class SimulationControl(QMainWindow):
             self.episodeLabel.setText(f"Episode: {episode}, Step: {step}")
 
     # idx, agent_buffer, valid_actions_current, pd_string, action, reward
+
     def updateQValuesDisplay(self, idx, agents, valid_actions, pd_string, action, reward):
+        if self.past_pd_string == "":
+            self.past_pd_string = pd_string
+
         if 0 <= idx < len(agents):
             agent = agents[idx]  # Access the specific agent
             Q_dicts = agent.return_q_dicts()
@@ -378,11 +381,15 @@ class SimulationControl(QMainWindow):
             # Initialize the text for this agent's Q-values display
             q_values_text = (f"Agent {idx} at {state}, has item: {has_item}\n"
                              f"Valid actions: {valid_actions}\n")
-            if pd_string != 5:
+            if pd_string != '5':
                 q_values_text += f"Complex_space2 P/D string: {pd_string}\n"
             q_values_text += "Q-values:\n"
             for action_key in agent.actions:
-                q_value = Q_dicts[pd_string].get((state, has_item, action_key), "--")
+                try:
+                    q_value = Q_dicts[pd_string].get((state, has_item, action_key), "--")
+                except:
+                    q_value = Q_dicts[self.past_pd_string].get((state, has_item, action_key), "--")
+
                 display_value = f"{q_value:.2f}" if q_value != "--" else "--"
                 q_values_text += f"    {action_key}: {display_value}\n"
             q_values_text += f"policy chooses action: {action}, Reward: {reward}"

@@ -26,7 +26,7 @@ class GridWorld:
             dropoffs_str = ''.join('1' if count < self.dropoffStorage else '0' for count in self.dropoffs.values())
             return pickups_str + dropoffs_str
         else:
-            return 5
+            return '5'
 
     def reset(self):
         """
