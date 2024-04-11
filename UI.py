@@ -29,7 +29,8 @@ https://realpython.com/python-pyqt-qthread/
 
 class SimulationControl(QMainWindow):
     #self.agents, env, episode, step, self.r
-    update_display_signal = pyqtSignal(object, object, int, int, int)
+    update_display_signal = pyqtSignal(object, object, int, int, int, bool)
+
 
     def __init__(self):
         super().__init__()
@@ -39,25 +40,25 @@ class SimulationControl(QMainWindow):
         self.agentLabels = []
         self.initUI()
         self.masterskip = False
-        self.past_pd_string = ''
 
     def initUI(self):
         self.setWindowTitle('Simulation Control')
-        self.setGeometry(100, 100, 1200, 800)
+        self.setGeometry(100, 100, 1200, 1200)
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
 
         # Tab 1: World Creation
         self.worldCreationTab = QWidget()
-        self.tabs.addTab(self.worldCreationTab, "World Creation")
+        self.scrollArea = QScrollArea()
+        self.tabs.addTab(self.scrollArea, "World Creation")
         self.initWorldCreationTab()
         # Tab 2: Simulation Control
         self.simulationControlTab = QWidget()
         self.tabs.addTab(self.simulationControlTab, "Simulation")
         self.initSimulationControlTab()
         # Tab 3: Charts and Data
-        self.chartsDataTab = QWidget()
-        self.tabs.addTab(self.chartsDataTab, "Charts and Data")
+        self.qTableTab = QWidget()
+        self.tabs.addTab(self.qTableTab, "Charts and Data")
         self.initChartsDataTab()
 
     def initWorldCreationTab(self):
@@ -199,13 +200,18 @@ class SimulationControl(QMainWindow):
         self.initBlankWorldPreview(5)
         layout.addLayout(self.worldPreviewLayout)
 
-        self.createAndRunBtn = QPushButton("Create World and Run", self)
-        self.createAndRunBtn.clicked.connect(self.onCreateAndRunClicked)
-        layout.addWidget(self.createAndRunBtn)
+        createAndRunBtn = QPushButton("Create World and Run", self)
+        createAndRunBtn.clicked.connect(self.onCreateAndRunClicked)
+        layout.addWidget(createAndRunBtn)
 
         self.randomSeedInput.setMaximumWidth(200)
         self.simulationModeBtn.setMaximumWidth(200)
-        self.worldCreationTab.setLayout(layout)
+        #self.worldCreationTab.setLayout(layout)
+        worldCreationContent = QWidget()
+        worldCreationContent.setLayout(layout)
+
+        self.scrollArea.setWidgetResizable(True)  # Allows the scroll area to adapt to the size of its content
+        self.scrollArea.setWidget(worldCreationContent)
 ######
     def initSimulationControlTab(self):
 
@@ -292,11 +298,29 @@ class SimulationControl(QMainWindow):
         layout.addWidget(self.speedValueLabel, 3, 3)  # Display the current speed value next to the slider
 
         self.simulationControlTab.setLayout(layout)
+        self.nextBtn.setEnabled(False)
+        self.playBtn.setEnabled(False)
+        self.pauseBtn.setEnabled(False)
+        self.skipInput.setEnabled(False)
+        self.skipBtn.setEnabled(False)
+        self.speedSlider.setEnabled(False)
 ######
     def initChartsDataTab(self):
         layout = QVBoxLayout()
-        layout.addWidget(QLabel("Data Visualization Will Be Here"))
-        self.chartsDataTab.setLayout(layout)
+
+        self.agentSelectCombo = QComboBox()
+        #self.agentSelectCombo.currentIndexChanged.connect(self.updatePdStringDropdown)
+        layout.addWidget(self.agentSelectCombo)
+
+        self.pdStringSelectCombo = QComboBox()
+        #self.pdStringSelectCombo.currentIndexChanged.connect(self.displaySelectedQTable)
+        layout.addWidget(self.pdStringSelectCombo)
+
+        self.qTableDisplay = QTextEdit()
+        self.qTableDisplay.setReadOnly(True)
+        layout.addWidget(self.qTableDisplay)
+
+        self.qTableTab.setLayout(layout)
 
 ######################################################################
     def initWorldStateGrid(self, size, agents=[], pickups=[], dropoffs=[]):
@@ -326,13 +350,13 @@ class SimulationControl(QMainWindow):
 
         self.worldStateContainer.setFixedSize(700, 700)
 
-    def updateDisplay(self, agents, env, ep, step, r, ep_based):
+    def updateDisplay(self, agents, env, ep, step, r, ep_based, totalsteps):
         # print("updating display")
         # print(agents[0].get_state())
         if ep_based:
-            self.episodeLabel.setText(f"Episode: {ep+1}/{r}, Step: {step}")
+            self.episodeLabel.setText(f"Episode: {ep}/{r}, Step: {step}, Total Steps: {totalsteps}")
         else:
-            self.episodeLabel.setText(f"Step: {step}/{r}")
+            self.episodeLabel.setText(f"Step: {totalsteps}/{r}, Episode: #{ep} (total runs completed)")
         size, actions, dropoffStorage, pickups, dropoffs, used_dropoffs = env.UIrenderVals()
         for row in range(size):
             for col in range(size):
@@ -370,11 +394,7 @@ class SimulationControl(QMainWindow):
             self.episodeLabel.setText(f"Episode: {episode}, Step: {step}")
 
     # idx, agent_buffer, valid_actions_current, pd_string, action, reward
-
     def updateQValuesDisplay(self, idx, agents, valid_actions, pd_string, action, reward):
-        if self.past_pd_string == "":
-            self.past_pd_string = pd_string
-
         if 0 <= idx < len(agents):
             agent = agents[idx]  # Access the specific agent
             Q_dicts = agent.return_q_dicts()
@@ -383,15 +403,11 @@ class SimulationControl(QMainWindow):
             # Initialize the text for this agent's Q-values display
             q_values_text = (f"Agent {idx} at {state}, has item: {has_item}\n"
                              f"Valid actions: {valid_actions}\n")
-            if pd_string != '5':
+            if pd_string != 5:
                 q_values_text += f"Complex_space2 P/D string: {pd_string}\n"
             q_values_text += "Q-values:\n"
             for action_key in agent.actions:
-                try:
-                    q_value = Q_dicts[pd_string].get((state, has_item, action_key), "--")
-                except:
-                    q_value = Q_dicts[self.past_pd_string].get((state, has_item, action_key), "--")
-
+                q_value = Q_dicts[pd_string].get((state, has_item, action_key), "--")
                 display_value = f"{q_value:.2f}" if q_value != "--" else "--"
                 q_values_text += f"    {action_key}: {display_value}\n"
             q_values_text += f"policy chooses action: {action}, Reward: {reward}"
@@ -597,7 +613,12 @@ class SimulationControl(QMainWindow):
 
         # Start the simulation thread
         self.simulationThread.start()
-        self.createAndRunBtn.setEnabled(False)
+        self.nextBtn.setEnabled(True)
+        self.playBtn.setEnabled(True)
+        self.pauseBtn.setEnabled(True)
+        self.skipInput.setEnabled(True)
+        self.skipBtn.setEnabled(True)
+        self.speedSlider.setEnabled(True)
 
 
     def initBlankWorldPreview(self, size, agents=[], pickups=[], dropoffs=[]):
@@ -686,6 +707,42 @@ class SimulationControl(QMainWindow):
         self.updateAddedPickupDropoffDisplay()
         self.onPreviewWorldClicked()
 
+#########
+    def populateAgentDropdown(self, agents):
+        self.agentSelectCombo.clear()
+        for index, agent in enumerate(agents):
+            self.agentSelectCombo.addItem(f"Agent {index}", agent)
+
+    def updatePdStringDropdown(self, index):
+        agent = self.agentSelectCombo.itemData(index)
+        if agent:
+            # Assuming agents have a method get_pd_strings() that returns a list of strings
+            pd_strings = agent.get_pd_strings()
+            self.pdStringSelectCombo.clear()
+            for pd_string in pd_strings:
+                self.pdStringSelectCombo.addItem(pd_string)
+        else:
+            self.pdStringSelectCombo.clear()
+
+    def displaySelectedQTable(self):
+        agentIndex = self.agentSelectCombo.currentIndex()
+        pdString = self.pdStringSelectCombo.currentText()
+        agent = self.agentSelectCombo.itemData(agentIndex)
+        if agent and pdString:
+            q_table_text = self.formatQTableForDisplay(agent, pdString)
+            self.qTableDisplay.setText(q_table_text)
+
+    def formatQTableForDisplay(self, agent, pd_string):
+        # Fetch the Q-table from the agent using pd_string
+        # Format it as a string for display
+        q_table_text = "Q-Table\n"
+        Q_dicts = agent.return_q_dicts()  # Assuming this method returns the Q-tables
+        for state, has_item, action in Q_dicts.get(pd_string, {}):
+            q_value = Q_dicts[pd_string].get((state, has_item, action), 'N/A')
+            q_table_text += f"State: {state}, Has Item: {has_item}, Action: {action} -> Q-value: {q_value}\n"
+        return q_table_text
+
+#########
 class MockSimulationControl:
     def __init__(self):
         # Since this mock class is for running without UI, we don't actually wait for any events.
