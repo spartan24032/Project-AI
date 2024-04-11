@@ -6,7 +6,7 @@ import copy
 class SimulationWorker(QObject):
     finished = pyqtSignal()
     # self.agents, env, episode, step, self.r
-    update_display = pyqtSignal(object, object, int, int, int)
+    update_display = pyqtSignal(object, object, int, int, int, bool)
     # idx, agent_buffer, valid_actions_current, pd_string, action, reward
     update_qtable_display = pyqtSignal(int, object, list, str, str, int)
     requestPause = pyqtSignal()
@@ -31,6 +31,7 @@ class SimulationWorker(QObject):
         self.requestNext.connect(self.onNext)
         self.requestSkip.connect(self.onSkip)
         self.mskip = mskip
+        self.endReached = False
 
     def onPause(self):
         self.paused = True
@@ -83,17 +84,20 @@ class SimulationWorker(QObject):
                     agent_buffer = copy.deepcopy(self.agents)
                     environment_buffer = copy.deepcopy(self.env)
                     pd_buffer = copy.deepcopy(pd_string)
-                    self.update_display.emit(agent_buffer, environment_buffer, episode, step, self.r)
+                    self.update_display.emit(agent_buffer, environment_buffer, episode, step, self.r, self.episode_based)
                 actions_taken = []
 
                 for idx, agent in enumerate(self.agents):
-                    if self.env.dropoffs_complete():
+                    if self.env.dropoffs_complete() and not self.endReached:
+                        self.paused = True
+                        self.autoPlay = False
+                        self.skipTo = None
+                        self.endReached = True
                         if verbose:
                             print(f"\nStep {step + 1}")
                             self.env.render(self.agents)
                             print(f"All dropoffs complete.\nTotal Reward for Episode {episode + 1}: {total_reward}\n")
-                        break
-                    if not self.episode_based and step > self.r or self.env.dropoffs_complete():
+                    if (not self.episode_based and step > self.r):
                         print("reached max steps OR completed all dropoffs, killing program")
                         exit()
                     old_state, old_has_item = agent.get_state()

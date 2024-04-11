@@ -199,9 +199,9 @@ class SimulationControl(QMainWindow):
         self.initBlankWorldPreview(5)
         layout.addLayout(self.worldPreviewLayout)
 
-        createAndRunBtn = QPushButton("Create World and Run", self)
-        createAndRunBtn.clicked.connect(self.onCreateAndRunClicked)
-        layout.addWidget(createAndRunBtn)
+        self.createAndRunBtn = QPushButton("Create World and Run", self)
+        self.createAndRunBtn.clicked.connect(self.onCreateAndRunClicked)
+        layout.addWidget(self.createAndRunBtn)
 
         self.randomSeedInput.setMaximumWidth(200)
         self.simulationModeBtn.setMaximumWidth(200)
@@ -326,11 +326,13 @@ class SimulationControl(QMainWindow):
 
         self.worldStateContainer.setFixedSize(700, 700)
 
-    def updateDisplay(self, agents, env, ep, step, r):
+    def updateDisplay(self, agents, env, ep, step, r, ep_based):
         # print("updating display")
         # print(agents[0].get_state())
-        if ep is not None:
+        if ep_based:
             self.episodeLabel.setText(f"Episode: {ep+1}/{r}, Step: {step}")
+        else:
+            self.episodeLabel.setText(f"Step: {step}/{r}")
         size, actions, dropoffStorage, pickups, dropoffs, used_dropoffs = env.UIrenderVals()
         for row in range(size):
             for col in range(size):
@@ -595,6 +597,7 @@ class SimulationControl(QMainWindow):
 
         # Start the simulation thread
         self.simulationThread.start()
+        self.createAndRunBtn.setEnabled(False)
 
 
     def initBlankWorldPreview(self, size, agents=[], pickups=[], dropoffs=[]):
