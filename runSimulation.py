@@ -32,7 +32,7 @@ def run_simulation(agents, env, sim_control, complex_world2=False, episode_based
         while( (episode_based == False and step < r) or (episode_based == True and not env.dropoffs_complete()) ):
             #if not episode_based:
             #   verbose = step % 10 == 0
-            verbose = step % 1 == 0
+            #verbose = step % 1 == 0
             step += 1
             # if sim_control.skip_to_step is None:
             #     sim_control.updateCurrentWorldDisplay(agents, env, episode, step, r)
@@ -47,8 +47,9 @@ def run_simulation(agents, env, sim_control, complex_world2=False, episode_based
                         print(f"\nStep {step + 1}")
                         env.render(agents)
                         print(f"All dropoffs complete.\nTotal Reward for Episode {episode + 1}: {total_reward}\n")
-                        reset_locations(agents)
+                        #reset_locations(agents)
                         env.reset()
+                        #total_reward = 0
                         #time.sleep(5)
                         #exit()
                     break

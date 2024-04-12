@@ -24,19 +24,19 @@ if __name__ == "__main__":
 
     complex_world2 = True # This uses a different state for each config of dropoff and pickup.
                             # It is great at finding the optimal policy, but uses 64x memory.
-    episode_based = False  # This chooses if we are using episodes or steps to run the simulation
+    episode_based = True # This chooses if we are using episodes or steps to run the simulation
                            # False = steps, True = episodes
     #  "r" will either be episodes to run or total steps to run, depending on this value.
 
     a = env.actions
     agents = [
         # alpha = learning rate , gamma = discount factor
-         Agent(a, start_state=(2,2), policy = PRandom, learning_algorithm="Q-learning",alpha=0.3, gamma=0.5),
-         Agent(a, start_state=(4,2), policy=PRandom, learning_algorithm="Q-learning",alpha=0.3, gamma=0.5),
-        Agent(a, start_state=(0,2), policy=PRandom, learning_algorithm="Q-learning", alpha=0.3, gamma=0.5)
+         Agent(a, start_state=(2,2), policy = PExploit, learning_algorithm="Q-learning",alpha=0.3, gamma=0.5),
+         Agent(a, start_state=(4,2), policy=PExploit, learning_algorithm="Q-learning",alpha=0.3, gamma=0.5),
+        Agent(a, start_state=(0,2), policy=PExploit, learning_algorithm="Q-learning", alpha=0.3, gamma=0.5)
     ]
     sim_control = MockSimulationControl() # This is a mock control class that does nothing, allows code to run without UI
-    run_simulation(agents, env, sim_control, complex_world2, episode_based, r=3000)
+    run_simulation(agents, env, sim_control, complex_world2, episode_based, r=30)
 #print(agents[0].Q_dicts['111111'])
 excel_writer = pd.ExcelWriter('agents_q_tables_PRANDOM_500_PRANDOM_8500.xlsx', engine='xlsxwriter')
 
