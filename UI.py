@@ -874,9 +874,9 @@ class SimulationControl(QMainWindow):
                 self.qTableWidget.setItem(row, 1, has_item_item)
                 self.qTableWidget.setItem(row, 2, action_item)
                 self.qTableWidget.setItem(row, 3, value_item)
-                self.qTableWidget.resizeColumnsToContents()
         else:
             self.qTableWidget.setRowCount(0)
+        self.qTableWidget.resizeColumnsToContents()
 
         if self.pdStringSelectCombo.count() == 1:
             self.pdStringSelectCombo.setEnabled(False)  # Disable dropdown if only one option
