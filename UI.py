@@ -67,26 +67,42 @@ class SimulationControl(QMainWindow):
 
         self.tabs.currentChanged.connect(self.onTabChange)
 
+        screen = QApplication.primaryScreen().size()
+        width = screen.width() * 0.5
+        height = screen.height() * 0.8
+        self.setGeometry(100, 100, int(width), int(height))
+
+
     def onTabChange(self, index):
         if self.created:
             self.onPauseClicked()
             if self.tabs.widget(index) == self.qTableTab:
                 self.populateComboboxes(self.tabagents)
 
+    """def squareResizeEvent(self, event):
+        # Assuming a square aspect ratio
+        new_size = min(self.size().width() * 0.5, self.size().height() * 0.5)
+        self.simulationDisplay.setFixedSize(QSize(new_size, new_size))
+        self.previewWorldDisplay.setFixedSize(QSize(new_size, new_size))
+        super().resizeEvent(event)"""
+
     def initWorldCreationTab(self):
+        screen = QApplication.primaryScreen().size()
+        new_size = min(self.size().width() * 0.5, self.size().height() * 0.5)
         layout = QVBoxLayout()
-        layout.setSpacing(2)
+        layout.setSpacing(0)
 
         presetBtn = QPushButton("Load Preset Data for Project", self)
         presetBtn.clicked.connect(self.loadPresetData)
         layout.addWidget(presetBtn)
-        presetBtn.setMaximumWidth(300)
-        layout.addItem(QSpacerItem(50, 50))
+        presetBtn.setMaximumWidth(int(screen.width()*0.2))
+        layout.addItem(QSpacerItem(int(new_size/30), int(new_size/30)))
 
         randomSeedLayout = QHBoxLayout()
         randomSeedLabel = QLabel("Random Seed (leave blank for random seed): ")
         self.randomSeedInput = QLineEdit(self)
         randomSeedLayout.addWidget(randomSeedLabel)
+
         randomSeedLayout.addWidget(self.randomSeedInput)
         randomSeedLayout.addStretch()
         layout.addLayout(randomSeedLayout)
@@ -99,6 +115,8 @@ class SimulationControl(QMainWindow):
         self.worldSizeInput.setPlaceholderText("e.g., 5 for a 5x5 grid")
         worldSizeLayout.addWidget(worldSizeLabel)
         worldSizeLayout.addWidget(self.worldSizeInput)
+        self.worldSizeInput.setMaximumWidth(int(screen.width() * 0.1))
+        worldSizeLayout.addStretch()
         layout.addLayout(worldSizeLayout)
 
         simulationModeLayout = QHBoxLayout()
@@ -108,13 +126,15 @@ class SimulationControl(QMainWindow):
         self.simulationModeLabel = QLabel(" Episodes: ")
         self.episodesOrStepsInput = QLineEdit(self)
         self.episodesOrStepsInput.setPlaceholderText("300")
+        self.episodesOrStepsInput.setMaximumWidth(int(screen.width() * 0.05))
 
         simulationModeLayout.addWidget(self.simulationModeBtn)
         simulationModeLayout.addWidget(self.simulationModeLabel)
         simulationModeLayout.addWidget(self.episodesOrStepsInput)
+        simulationModeLayout.addStretch()
         layout.addLayout(simulationModeLayout)
 
-        layout.addItem(QSpacerItem(50, 50))
+        layout.addItem(QSpacerItem(int(new_size / 30), int(new_size / 30)))
 
         # Section for Adding and Configuring Agents
         self.agentLayout = QHBoxLayout()
@@ -164,7 +184,7 @@ class SimulationControl(QMainWindow):
         overridePolicyLayout.addWidget(self.overridePolicyComboBox)
         overridePolicyLayout.addWidget(QLabel(" until step/episode: "))
         overridePolicyLayout.addWidget(self.overrideTerminationStepInput)
-        self.overrideTerminationStepInput.setMaximumWidth(100)
+        self.overrideTerminationStepInput.setMaximumWidth(int(screen.width()*0.05))
         overridePolicyLayout.addWidget(QLabel(" (will return to default after this)"))
         overridePolicyLayout.addStretch()
         layout.addLayout(overridePolicyLayout)
@@ -174,15 +194,18 @@ class SimulationControl(QMainWindow):
         self.overrideDisclaimer.setStyleSheet("color: #4a4a4a; font: italic;")
         layout.addWidget(self.overrideDisclaimer)
 
-        layout.addItem(QSpacerItem(50, 50))
+        layout.addItem(QSpacerItem(int(new_size/30), int(new_size/30)))
         self.pickupDropoffLayout = QHBoxLayout()
 
 
         capacityInputLayout = QHBoxLayout()
         capacityInputL = QLabel("Capacity for Pickups & Dropoffs: ")
         self.capacityInput = QLineEdit(self)
+        self.capacityInput.setMaximumWidth(int(screen.width() * 0.1))
         capacityInputLayout.addWidget(capacityInputL)
         capacityInputLayout.addWidget(self.capacityInput)
+        capacityInputLayout.addStretch()
+
         layout.addLayout(capacityInputLayout)
         addPickupDropoffBtn = QPushButton(" Add Pickup/Dropoff ", self)
         addPickupDropoffBtn.clicked.connect(self.addPickupDropoffToList)
@@ -193,20 +216,25 @@ class SimulationControl(QMainWindow):
 
         self.pickupInput = QLineEdit()
         self.pickupInput.setPlaceholderText("Pickup (x,y)")
+        self.pickupInput.setMaximumWidth(int(screen.width() * 0.1))
         self.pickupDropoffLayout.addWidget(self.pickupInput)
-
         self.dropoffInput = QLineEdit()
         self.dropoffInput.setPlaceholderText("Dropoff (x,y)")
+        self.dropoffInput.setMaximumWidth(int(screen.width() * 0.1))
         self.pickupDropoffLayout.addWidget(self.dropoffInput)
+        self.pickupDropoffLayout.addStretch()
         layout.addLayout(self.pickupDropoffLayout)
 
         # Area to display added pickup/dropoff pairs
         self.addedPickupDropoffDisplay = QLabel("Added Pickup/Dropoff Pairs: None")
         layout.addWidget(self.addedPickupDropoffDisplay)
+        #layout.addStretch(1)
 
-        layout.addItem(QSpacerItem(50, 50))
+        layout.addItem(QSpacerItem(int(new_size/30), int(new_size/30)))
         self.previewWorldBtn = QPushButton("Preview World", self)
         self.previewWorldBtn.clicked.connect(self.onPreviewWorldClicked)
+        self.previewWorldBtn.setMaximumWidth(int(screen.width() * 0.3))
+        # self.pickupDropoffLayout.addStretch()
         layout.addWidget(self.previewWorldBtn)
         self.worldPreviewLayout = QVBoxLayout()
         self.initBlankWorldPreview(5)
@@ -214,7 +242,9 @@ class SimulationControl(QMainWindow):
 
         createAndRunBtn = QPushButton("Create World and Run", self)
         createAndRunBtn.clicked.connect(self.onCreateAndRunClicked)
+        createAndRunBtn.setMaximumWidth(int(screen.width() * 0.3))
         layout.addWidget(createAndRunBtn)
+        layout.addStretch(1)
 
         self.randomSeedInput.setMaximumWidth(200)
         self.simulationModeBtn.setMaximumWidth(200)
@@ -226,6 +256,8 @@ class SimulationControl(QMainWindow):
         self.scrollArea.setWidget(worldCreationContent)
 ######
     def initSimulationControlTab(self):
+        screen = QApplication.primaryScreen().size()
+        new_size = min(screen.width() * 0.5, screen.height() * 0.5)
 
         layout = QGridLayout()
         layout.setRowStretch(5, 1)
@@ -245,8 +277,8 @@ class SimulationControl(QMainWindow):
         self.initWorldStateGrid(5)
 
         self.spacerFrame = QFrame(self)
-        self.spacerFrame.setFixedSize(100, 100)
-        layout.addWidget(self.spacerFrame, 0, 5, 1, 1)
+        #self.spacerFrame.setFixedSize(100, 100)
+        #layout.addWidget(self.spacerFrame, 0, 5, 1, 1)
 
         self.qValuesScrollArea = QScrollArea(self.simulationControlTab)
         self.qValuesScrollArea.setWidgetResizable(True)
@@ -258,12 +290,10 @@ class SimulationControl(QMainWindow):
 
         placeholderLabel = QLabel(
             "Current Agent State and Q-Values")
-        placeholderLabel.setStyleSheet("margin: 10px;")
         self.qValuesLayout.addWidget(placeholderLabel)
 
         self.qValuesScrollArea.setWidget(self.qValuesContainer)
         layout.addWidget(self.qValuesScrollArea, 0, 6, 5, -1)
-        self.qValuesLayout.addStretch()
 
         # Button to proceed to the next step
         self.nextBtn = QPushButton('Next', self)
@@ -330,6 +360,8 @@ class SimulationControl(QMainWindow):
 
 ######################################################################
     def initWorldStateGrid(self, size, agents=[], pickups=[], dropoffs=[]):
+        screen = QApplication.primaryScreen().size()
+        new_size = min(screen.width() * 0.5, screen.height() * 0.5)
         self.clearLayout(self.worldStateGrid)
 
         for row in range(size):
@@ -337,23 +369,23 @@ class SimulationControl(QMainWindow):
                 cellLabel = QLabel(f"{row},{col}")
                 cellLabel.setFrameStyle(QFrame.Panel | QFrame.Sunken)
                 cellLabel.setAlignment(Qt.AlignCenter)
-                cellLabel.setStyleSheet("border: 1px solid black;")
-                cellLabel.setFixedSize(int(600/size), int(600/size))
+                #cellLabel.setStyleSheet("border: 1px solid black;")
+                cellLabel.setFixedSize(int((new_size*0.89/size)), int((new_size*0.89/size)))
 
                 # Display agents, pickups, and dropoffs with specific styles
                 if (row, col) in agents:
                     cellLabel.setText("Agent")
-                    cellLabel.setStyleSheet("color: blue; font-size: 20px; border: 1px solid black;")
+                    cellLabel.setStyleSheet("color: blue; border: 1px solid black;")
                 elif (row, col) in pickups:
                     cellLabel.setText("P")
-                    cellLabel.setStyleSheet("color: green; font-size: 20px; border: 1px solid black;")
+                    cellLabel.setStyleSheet("color: green; border: 1px solid black;")
                 elif (row, col) in dropoffs:
                     cellLabel.setText("D")
-                    cellLabel.setStyleSheet("color: red; font-size: 20px; border: 1px solid black;")
+                    cellLabel.setStyleSheet("color: red; border: 1px solid black;")
 
                 self.worldStateGrid.addWidget(cellLabel, row, col)
 
-        self.worldStateContainer.setFixedSize(700, 700)
+        self.worldStateContainer.setFixedSize(int(new_size*0.8), int(new_size*0.9))
 
     def updateDisplay(self, agents, env, ep, step, r, ep_based, totalsteps):
         self.tabagents = agents
@@ -622,33 +654,37 @@ class SimulationControl(QMainWindow):
 
     def initBlankWorldPreview(self, size, agents=[], pickups=[], dropoffs=[]):
         self.clearLayout(self.worldPreviewLayout)
+        screen = QApplication.primaryScreen().size()
 
         gridContainer = QWidget()
         gridLayout = QGridLayout(gridContainer)
         gridLayout.setSpacing(0)
-
+        new_size = min(screen.width() * 0.5, screen.height() * 0.5)
+        print(new_size)
         for row in range(size):
             for col in range(size):
                 cellLabel = QLabel(f"{row},{col}")
                 cellLabel.setFrameStyle(QFrame.Panel | QFrame.Sunken)
                 cellLabel.setAlignment(Qt.AlignCenter)
                 cellLabel.setStyleSheet("border: 1px solid black;")
-                cellLabel.setFixedSize(80, 80)  # Increased size for better visibility and to fit the coordinate
+                dynamic_size = int(new_size / 12)
+                cellLabel.setFixedSize(dynamic_size, dynamic_size)  # Increased size for better visibility and to fit the coordinate
+
                 if (row, col) in agents:
                     # print("Agent at", row, col)
                     cellLabel.setText("Agent")
-                    cellLabel.setStyleSheet("color: blue; font-size: 20px; border: 1px solid black;")
+                    cellLabel.setStyleSheet("color: blue; border: 1px solid black;")
                 elif (row, col) in pickups:
                     cellLabel.setText("P")
-                    cellLabel.setStyleSheet("color: green; font-size: 20px; border: 1px solid black;")
+                    cellLabel.setStyleSheet("color: green; border: 1px solid black;")
                 elif (row, col) in dropoffs:
                     cellLabel.setText("D")
-                    cellLabel.setStyleSheet("color: red; font-size: 20px; border: 1px solid black;")
+                    cellLabel.setStyleSheet("color: red; border: 1px solid black;")
 
                 gridLayout.addWidget(cellLabel, row, col)
 
         gridContainer.setLayout(gridLayout)
-        gridContainer.setFixedSize(size * 100, size * 100)  # Adjust size based on number of squares and their size
+        gridContainer.setFixedSize(int(size * int(new_size) /10), int(size * int(new_size) /10) )  # Adjust size based on number of squares and their size
 
         self.worldPreviewLayout.addWidget(gridContainer)
 
@@ -882,6 +918,7 @@ class MockSimulationControl:
         self.masterskip = True
 
 if __name__ == "__main__":
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     app = QApplication(sys.argv)
     mainWin = SimulationControl()
     mainWin.show()
