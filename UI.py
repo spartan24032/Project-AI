@@ -1,4 +1,7 @@
 import sys
+
+import xlsxwriter
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
@@ -724,11 +727,85 @@ class SimulationControl(QMainWindow):
         header.setFont(font)
 
         layout.addWidget(self.qTableWidget)
+
+        self.exportButton = QPushButton("Export to Excel", self)
+        self.exportButton.clicked.connect(self.exportToExcel)
+        layout.addWidget(self.exportButton)
+
         self.qTablesDisplayTab.setLayout(layout)
         try:
             self.populateComboboxes(self.tabagents)
         except:
             return
+
+    def force_populate_q_table(self, original_q_table, world_size, actions):
+        # Copy the original dictionary to avoid modifying it directly
+        full_q_table = dict(original_q_table)
+
+        # Generate all possible combinations
+        for x in range(world_size):
+            for y in range(world_size):
+                for has_item in [False, True]:
+                    for action in actions:
+                        state = (x, y)
+                        key = (state, has_item, action)
+                        if key not in full_q_table:
+                            full_q_table[key] = "--"  # Fill missing entries with "--"
+
+        return full_q_table
+    def exportToExcel(self):
+        agent_index = self.agentSelectCombo.currentIndex()
+        pd_string = self.pdStringSelectCombo.currentText()
+        if agent_index == -1 or not pd_string:
+            print("No agent or PD string selected.")
+            return
+
+        selected_agent = self.tabagents[agent_index]
+        original_q_table = selected_agent.return_q_dicts().get(pd_string, {})
+
+        # Define the world size and action list, assuming these are accessible somehow
+        world_size = self.tabenv.get_size()
+        actions = self.tabenv.get_actions()
+
+        msgBox = QMessageBox()
+        msgBox.setIcon(QMessageBox.Question)
+        msgBox.setText("Do you want to force populate the Q-table with '--' for missing entries?")
+        msgBox.setWindowTitle("Populate Q-Table")
+        msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+
+        if msgBox.exec() == QMessageBox.Yes:
+            # Generate the fully populated Q-table
+            full_q_table = self.force_populate_q_table(original_q_table, world_size, actions)
+        else:
+            full_q_table = original_q_table
+
+        # Prompt user to save the file
+        options = QFileDialog.Options()
+        filename, _ = QFileDialog.getSaveFileName(self, "Save File", "", "Excel Files (*.xlsx);;All Files (*)",
+                                                  options=options)
+        if not filename:
+            return
+
+        workbook = xlsxwriter.Workbook(filename)
+        worksheet = workbook.add_worksheet()
+
+        # Write headers
+        headers = ['State', 'Has Item', 'Action', 'Value']
+        worksheet.write_row('A1', headers)
+
+        # Write data rows
+        row = 1
+        for (state, has_item, action), value in full_q_table.items():
+            state_str = f"({state[0]},{state[1]})"
+            has_item_str = "True" if has_item else "False"
+            worksheet.write(row, 0, state_str)
+            worksheet.write(row, 1, has_item_str)
+            worksheet.write(row, 2, action)
+            worksheet.write(row, 3, value)
+            row += 1
+
+        workbook.close()
+        print(f"Data exported successfully to {filename}")
 
     def initializeQTableWidget(self):
         world_size = self.tabenv.get_size()
@@ -774,17 +851,30 @@ class SimulationControl(QMainWindow):
     def displayQTable(self):
         agent_index = self.agentSelectCombo.currentIndex()
         pd_string = self.pdStringSelectCombo.currentText()
-        if agent_index != -1 and pd_string:
+        if 0 <= agent_index < len(self.tabagents) and pd_string:
             selected_agent = self.tabagents[agent_index]
             qtable = selected_agent.return_q_dicts().get(pd_string, {})
             self.qTableWidget.setRowCount(len(qtable))
             for row, ((state, has_item, action), value) in enumerate(qtable.items()):
+                state_item = QTableWidgetItem(str(state))
+                has_item_item = QTableWidgetItem(str(has_item))
+                action_item = QTableWidgetItem(str(action))
+                value_item = QTableWidgetItem(f"{value:.3f}")
+                value_item.setData(Qt.UserRole, float(value))
 
-                self.qTableWidget.setItem(row, 0, QTableWidgetItem(str(state)))
-                self.qTableWidget.setItem(row, 1, QTableWidgetItem(str(has_item)))
-                self.qTableWidget.setItem(row, 2, QTableWidgetItem(str(action)))
-                self.qTableWidget.setItem(row, 3, QTableWidgetItem(str(round(value, 3))))
-            self.qTableWidget.resizeColumnsToContents()
+                # Set background color if the Q-value is positive
+                if value > 0:
+                    green_background = QColor('#b6ffa3')  # Solid green
+                    state_item.setBackground(green_background)
+                    has_item_item.setBackground(green_background)
+                    action_item.setBackground(green_background)
+                    value_item.setBackground(green_background)
+
+                self.qTableWidget.setItem(row, 0, state_item)
+                self.qTableWidget.setItem(row, 1, has_item_item)
+                self.qTableWidget.setItem(row, 2, action_item)
+                self.qTableWidget.setItem(row, 3, value_item)
+                self.qTableWidget.resizeColumnsToContents()
         else:
             self.qTableWidget.setRowCount(0)
 

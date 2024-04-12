@@ -33,7 +33,7 @@ if __name__ == "__main__":
     agents = [
         # alpha = learning rate , gamma = discount factor
         Agent(a, start_state=(0,0), policy=PExploit, learning_algorithm="Q-learning", alpha=0.7, gamma=0.8,
-              override_policy=PRandom, override_max_step=10),
+              override_policy=PRandom, override_max_step=500),
         #Agent(a, start_state=(1,1), policy = PExploit, alpha=0.5, gamma=0.3),
         #Agent(a, start_state=(4,4), policy=PExploit, alpha=0.3, gamma=0.5)
     ]
