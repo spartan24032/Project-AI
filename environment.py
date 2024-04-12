@@ -81,7 +81,6 @@ class GridWorld:
             agent.update_state(new_state, has_item)
 
         return reward
-
     def valid_actions(self, agent_state, agents):
         state, has_item = agent_state
         x, y = state
@@ -90,11 +89,20 @@ class GridWorld:
         occupied_positions = [
             (agent.get_state()[0]) for agent in agents
         ]
-        # Check movement actions
-        if x > 0 and (x - 1, y) not in occupied_positions: actions.append('N')
-        if y < self.size - 1 and (x, y + 1) not in occupied_positions: actions.append('E')
-        if x < self.size - 1 and (x + 1, y) not in occupied_positions: actions.append('S')
-        if y > 0 and (x, y - 1) not in occupied_positions: actions.append('W')
+
+        if x > 0:
+            if (x - 1, y) not in occupied_positions: 
+                actions.append('N')
+        if y < self.size - 1:
+            if (x, y + 1) not in occupied_positions: 
+                actions.append('E')
+        if x < self.size - 1:
+            if(x + 1, y) not in occupied_positions:
+                actions.append('S')
+
+        if y > 0:
+            if (x, y - 1) not in occupied_positions: 
+                actions.append('W')
         # pickup and dropoff
         if (x, y) in self.pickups and not has_item and self.pickups[(x, y)] > 0:
             actions.append('pickup')
@@ -105,6 +113,46 @@ class GridWorld:
             actions.append('no op')
         return actions
 
+    def blocked_actions(self, agent_state, agents,agent):
+        state, has_item = agent_state
+        x, y = state
+        actions = []
+        location =x,y
+
+        occupied_positions = [
+            (agent.get_state()[0]) for agent in agents
+        ]
+        agent_num = {
+            (agent.get_state()[0]) :num for num,agent in enumerate(agents)
+        }
+        could_have = []
+        # Check movement actions
+        if x > 0:
+            if (x - 1, y) in occupied_positions: 
+                could_have.append((x-1,y))
+        if y < self.size - 1:
+            if (x, y + 1)  in occupied_positions: 
+                could_have.append((x,y+1))
+        if x < self.size - 1:
+            if(x + 1, y)  in occupied_positions:
+                could_have.append((x+1,y))
+        if y > 0:
+            if (x, y - 1)  in occupied_positions: 
+                could_have.append((x,y-1))
+
+        for blocked_move in could_have:
+            if(not has_item and blocked_move in self.pickups and  self.pickups[blocked_move] > 0):
+                try:
+                    agent.blocked_by[agent_num[blocked_move]].append(('P',(blocked_move)))
+                except KeyError:
+                    agent.blocked_by[agent_num[blocked_move]]=[('P',(blocked_move))]
+
+            if(has_item and blocked_move in self.dropoffs and self.dropoffs[blocked_move] < self.dropoffStorage):
+                try:
+                    agent.blocked_by[agent_num[blocked_move]].append(('D',(blocked_move)))
+                except KeyError:
+                    agent.blocked_by[agent_num[blocked_move]]=[('D',(blocked_move))]
+    
     def render(self, agents):
         """
         P/D # = pickup/dropoff, capacity of that location

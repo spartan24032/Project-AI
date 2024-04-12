@@ -16,10 +16,11 @@ from runSimulation import SimulationWorker
 import random
 
 # Example preset data
+alpha = '0.45'
 PRESET_AGENTS = [
-    ("(0,2)", "PExploit", "Q-learning", "0.5", "0.3"),
-    ("(2,2)", "PExploit", "Q-learning", "0.5", "0.3"),
-    ("(4,2)", "PExploit", "Q-learning", "0.5", "0.3"),
+    ("(0,2)", "PExploit", "Q-learning", alpha, "0.5"),
+    ("(2,2)", "PExploit", "Q-learning", alpha, "0.5"),
+    ("(4,2)", "PExploit", "Q-learning", alpha, "0.5"),
 ]
 PRESET_PICKUPS = ["(0,4)", "(1,3)", "(4,1)"]
 PRESET_DROPOFFS = ["(0,0)", "(2,0)", "(3,4)"]
@@ -589,7 +590,7 @@ class SimulationControl(QMainWindow):
             agentInstances.append(agent)
 
         complex_world2 = self.complexWorldCheck.isChecked()
-        episode_based = self.isEpisodeBased
+        episode_based = not self.isEpisodeBased
         r = int(self.episodesOrStepsInput.text())
         # Run simulation
         self.initWorldStateGrid(size, agentInstances, pickups, dropoffs)
@@ -697,7 +698,7 @@ class SimulationControl(QMainWindow):
         self.dropoffCoords.extend(PRESET_DROPOFFS)
         self.worldSizeInput.setText(PRESET_WORLDSIZE)
         self.capacityInput.setText('5')
-        self.episodesOrStepsInput.setText('30')
+        self.episodesOrStepsInput.setText('9000')
         self.randomSeedInput.setText('11')
 
         # Update the UI to reflect the preset data

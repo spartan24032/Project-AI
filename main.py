@@ -23,7 +23,7 @@ if __name__ == "__main__":
     
     env = GridWorld(size, pickups, dropoffs, dropoffCapacity)
 
-    complex_world2 = True  # This uses a different state for each config of dropoff and pickup.
+    complex_world2 = False  # This uses a different state for each config of dropoff and pickup.
                             # It is great at finding the optimal policy, but uses 64x memory.
     episode_based = False  # This chooses if we are using episodes or steps to run the simulation
                            # False = steps, True = episodes
@@ -41,3 +41,4 @@ if __name__ == "__main__":
     sim_control = MockSimulationControl() # This is a mock control class that does nothing, allows code to run without UI
     simulationWorker = SimulationWorker(agents, env, complex_world2, episode_based, r, mskip = True)
     simulationWorker.run_simulation()
+            

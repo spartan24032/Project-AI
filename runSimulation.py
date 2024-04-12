@@ -3,6 +3,8 @@ import time
 from PyQt5.QtCore import pyqtSignal, QObject, QThread, QTimer
 import copy
 import pandas as pd 
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 class SimulationWorker(QObject):
@@ -36,7 +38,7 @@ class SimulationWorker(QObject):
         self.mskip = mskip
         self.totalsteps = 0
     def print_excel(self):
-            excel_writer = pd.ExcelWriter('agents_q_tables_PRANDOM_500_PRANDOM_8500.xlsx', engine='xlsxwriter')
+            excel_writer = pd.ExcelWriter('Q_EXP3_Complex_SEED_2_Alpha_0.45_PRANDOM_500_PEXPLOIT_8500.xlsx', engine='xlsxwriter')
 
             for num, agent in enumerate(self.agents):
                 for q_table in agent.Q_dicts.keys():
@@ -60,6 +62,17 @@ class SimulationWorker(QObject):
 
             # Save the Excel writer object
             excel_writer.close()
+    def coordination(self):
+        agent_data ={}
+        for num,agent in enumerate(self.agents):
+            #print(f"Agent {num}")
+            agent_data[num] = {}
+            for agent_blocking in agent.blocked_by.keys():
+                #print(agent_blocking)
+                sorted_p_d = (sorted(agent.blocked_by[agent_blocking],key = lambda x:x[0]))
+                #rint(sorted(sorted_p_d,key= lambda x: x[1]))
+                agent_data[num][agent_blocking]=(sorted(sorted_p_d,key= lambda x: x[1]))
+        print(agent_data)
 
     def onPause(self):
         self.paused = True
@@ -86,7 +99,7 @@ class SimulationWorker(QObject):
                 episode = self.core_logic(episode)
         print('here')
         self.print_excel()
-        print('done')
+        self.coordination()
         self.finished.emit()
 
     def core_logic(self, episode):
@@ -98,7 +111,7 @@ class SimulationWorker(QObject):
 
         # use verbose to control which episodes get output
         # [0, self.r - 1] to see the first and last.
-        verbose = False# episode in [self.r - 1]
+        verbose =  False #episode in [self.r - 1]
 
         if verbose:
             print(f"--- Episode {episode + 1} ---")
@@ -107,7 +120,7 @@ class SimulationWorker(QObject):
         step = 0
         while (not self.env.dropoffs_complete()):
             if not self.episode_based:
-                verbose = step % 60 == 0
+                verbose = False# step % 1000 == 0
                 if self.totalsteps > self.r:
                     return episode
 
@@ -132,6 +145,7 @@ class SimulationWorker(QObject):
                 old_state, old_has_item = agent.get_state()
                 # Get valid actions for the CURRENT state, before action is chosen
                 valid_actions_current = self.env.valid_actions(agent.get_state(), self.agents)
+                self.env.blocked_actions(agent.get_state(), self.agents,agent)
                 action = agent.choose_action(valid_actions_current, pd_string, step, episode, self.episode_based)
                 if verbose:
                     print(f"\033[91mAgent {idx}\033[0m {old_state}, Valid Actions: {valid_actions_current}")
@@ -171,5 +185,5 @@ class SimulationWorker(QObject):
                             break
                 if self.autoPlay:
                     time.sleep((101 - (self.autoPlay_speed + 30) * 2) / 100)
-
+            #time.sleep(1)
         return episode

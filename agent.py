@@ -14,6 +14,7 @@ class Agent:
         self.policy = policy  # Current policy in use
         self.override_policy = override_policy
         self.terminate_override_step = override_max_step
+        self.blocked_by = {}
 
     def reset(self, pd_string):
         self.state = self.reset_state
