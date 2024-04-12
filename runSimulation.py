@@ -2,6 +2,8 @@
 import time
 from PyQt5.QtCore import pyqtSignal, QObject, QThread, QTimer
 import copy
+import pandas as pd 
+
 
 class SimulationWorker(QObject):
     finished = pyqtSignal()
@@ -13,6 +15,7 @@ class SimulationWorker(QObject):
     requestPlay = pyqtSignal(int)
     requestNext = pyqtSignal()
     requestSkip = pyqtSignal(int)
+   
 
     def __init__(self, agents, env, complex_world2, episode_based, r, mskip):
         super().__init__()
@@ -32,6 +35,31 @@ class SimulationWorker(QObject):
         self.requestSkip.connect(self.onSkip)
         self.mskip = mskip
         self.totalsteps = 0
+    def print_excel(self):
+            excel_writer = pd.ExcelWriter('agents_q_tables_PRANDOM_500_PRANDOM_8500.xlsx', engine='xlsxwriter')
+
+            for num, agent in enumerate(self.agents):
+                for q_table in agent.Q_dicts.keys():
+                    Actions = ['S', 'E', 'W', 'N', 'pickup', 'dropoff']
+                    cols = ['Location', 'Has_Block', 'S', 'E', 'W', 'N', 'pickup', 'dropoff']
+                    df = pd.DataFrame(columns=cols)
+
+                    for row in range(5):
+                        for col in range(5):
+                            location = (row, col)
+                            for has_block in [True, False]:
+                                new_row = {'Location': str(location), 'Has_Block': 1 if has_block else 0}
+                                for action in Actions:
+                                    new_row[action] = round(agent.Q_dicts[q_table].get((location, has_block, action), 0), 2)
+                                df.loc[len(df)]= new_row
+                                df = df.reset_index(drop=True)
+
+                    # Add the DataFrame to the Excel writer object as a new sheet
+                    sheet_name = 'Agent_{}_{}'.format(num, q_table)
+                    df.to_excel(excel_writer, sheet_name=sheet_name, index=False)
+
+            # Save the Excel writer object
+            excel_writer.close()
 
     def onPause(self):
         self.paused = True
@@ -56,7 +84,9 @@ class SimulationWorker(QObject):
         else:
             while self.totalsteps < self.r:
                 episode = self.core_logic(episode)
-
+        print('here')
+        self.print_excel()
+        print('done')
         self.finished.emit()
 
     def core_logic(self, episode):
@@ -68,7 +98,7 @@ class SimulationWorker(QObject):
 
         # use verbose to control which episodes get output
         # [0, self.r - 1] to see the first and last.
-        verbose = episode in [self.r - 1]
+        verbose = False# episode in [self.r - 1]
 
         if verbose:
             print(f"--- Episode {episode + 1} ---")
