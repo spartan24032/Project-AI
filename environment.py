@@ -16,6 +16,11 @@ class GridWorld:
         self.grid = np.zeros((self.size, self.size), dtype=str)
         self.reset()
 
+    def get_actions(self):
+        return self.actions
+    def get_size(self):
+        return int(self.size)
+
     def dropoffs_complete(self):
         return all(capacity == self.dropoffStorage for capacity in self.dropoffs.values())
 

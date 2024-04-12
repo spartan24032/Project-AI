@@ -23,6 +23,9 @@ class Agent:
     
     def get_state(self):
         return self.state, self.has_item
+
+    def get_policy(self):
+        return str(self.policy)[10:18]
     
     def update_state(self, new_state, has_item):
         self.state = new_state

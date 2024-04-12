@@ -60,14 +60,14 @@ class SimulationControl(QMainWindow):
         # Tab 3: Charts and Data
         self.qTableTab = QWidget()
         self.tabs.addTab(self.qTableTab, "Charts and Data")
-        self.initChartsDataTab()
+
         self.tabs.currentChanged.connect(self.onTabChange)
 
     def onTabChange(self, index):
         if self.created:
             self.onPauseClicked()
-        if self.tabs.widget(index) == self.qTableTab:
-            self.populateComboboxes()
+            if self.tabs.widget(index) == self.qTableTab:
+                self.populateComboboxes(self.tabagents)
 
     def initWorldCreationTab(self):
         layout = QVBoxLayout()
@@ -238,21 +238,19 @@ class SimulationControl(QMainWindow):
 
         layout.addWidget(self.worldStateContainer, 1, 0, 1, -1)
         self.simulationControlTab.setLayout(layout)
-        # Initialize the grid with a default size (e.g., 5x5)
         self.initWorldStateGrid(5)
 
         self.spacerFrame = QFrame(self)
         self.spacerFrame.setFixedSize(100, 100)
         layout.addWidget(self.spacerFrame, 0, 5, 1, 1)
 
-        self.qValuesScrollArea = QScrollArea(self.simulationControlTab)  # Ensure it's a child of the tab widget
+        self.qValuesScrollArea = QScrollArea(self.simulationControlTab)
         self.qValuesScrollArea.setWidgetResizable(True)
         self.qValuesScrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
 
-        # Container widget for Q-values content
         self.qValuesContainer = QWidget()
-        self.qValuesScrollArea.setWidget(self.qValuesContainer)  # Set the container widget to the scroll area
-        self.qValuesLayout = QVBoxLayout(self.qValuesContainer)  # Use the container as the parent for the layout
+        self.qValuesScrollArea.setWidget(self.qValuesContainer)
+        self.qValuesLayout = QVBoxLayout(self.qValuesContainer)
 
         placeholderLabel = QLabel(
             "Current Agent State and Q-Values")
@@ -323,7 +321,7 @@ class SimulationControl(QMainWindow):
 
         self.graphsTab = QWidget()
         self.nestedTabs.addTab(self.graphsTab, "Graphs")
-
+        self.builtQtable = False
         self.setupQTablesDisplayTab()
 
 ######################################################################
@@ -335,7 +333,6 @@ class SimulationControl(QMainWindow):
                 cellLabel = QLabel(f"{row},{col}")
                 cellLabel.setFrameStyle(QFrame.Panel | QFrame.Sunken)
                 cellLabel.setAlignment(Qt.AlignCenter)
-                # Set style for better visibility
                 cellLabel.setStyleSheet("border: 1px solid black;")
                 cellLabel.setFixedSize(int(600/size), int(600/size))
 
@@ -355,18 +352,19 @@ class SimulationControl(QMainWindow):
         self.worldStateContainer.setFixedSize(700, 700)
 
     def updateDisplay(self, agents, env, ep, step, r, ep_based, totalsteps):
+        self.tabagents = agents
+        self.tabenv = env
         if ep_based:
             self.episodeLabel.setText(f"Episode: {ep}/{r}, Step: {step}, Total Steps: {totalsteps}")
         else:
             self.episodeLabel.setText(f"Step: {totalsteps}/{r}, Episode: #{ep} (total runs completed)")
         size, actions, dropoffStorage, pickups, dropoffs, used_dropoffs = env.UIrenderVals()
-        # self.populateComboboxes()
         for row in range(size):
             for col in range(size):
                 cell_label = self.worldStateGrid.itemAtPosition(row, col).widget()
                 base_content = ' '
                 cell_style = "QLabel { font-weight: bold; border: 1px solid black; "
-                cell_style += "background-color: white; color: black; "  # Default background
+                cell_style += "background-color: white; color: black; "
 
                 # Check for pickups and dropoffs
                 if (row, col) in pickups:
@@ -396,6 +394,7 @@ class SimulationControl(QMainWindow):
         if 0 <= idx < len(agents):
             agent = agents[idx]  # Access the specific agent
             Q_dicts = agent.return_q_dicts()
+            policy = agent.get_policy()
             state, has_item = agent.get_state()
 
             # Initialize the text for this agent's Q-values display
@@ -411,7 +410,8 @@ class SimulationControl(QMainWindow):
                     return
                 display_value = f"{q_value:.2f}" if q_value != "--" else "--"
                 q_values_text += f"    {action_key}: {display_value}\n"
-            q_values_text += f"policy chooses action: {action}, Reward: {reward}"
+            q_values_text += f"using policy: {policy}\n"
+            q_values_text += f"chooses action: {action}, Reward: {reward}"
 
             # Update only the QLabel for the agent specified by idx
             self.updateAgentLabel(idx, q_values_text)
@@ -419,15 +419,12 @@ class SimulationControl(QMainWindow):
         self.qValuesLayout.addStretch()  # Ensures content is top-aligned
 
     def updateAgentLabel(self, idx, text):
-        # Check if the QLabel for this agent exists; if not, create it
         if idx >= len(self.agentLabels):
             for _ in range(len(self.agentLabels), idx + 1):
                 label = QLabel()
                 label.setStyleSheet("margin: 5px; padding: 5px; border: 1px solid black; background-color: #fcba03;")
                 self.qValuesLayout.addWidget(label)
                 self.agentLabels.append(label)
-
-        # Update the QLabel text for the specified agent
         self.agentLabels[idx].setText(text)
 
     def onNextClicked(self):
@@ -456,7 +453,6 @@ class SimulationControl(QMainWindow):
     def onSkipClicked(self):
         if self.simulationWorker:
             skips = int(self.skipInput.text())
-            # print(f"sending skip signal with {skips}")
             self.simulationWorker.requestSkip.emit(skips)
             self.simulationWorker.requestNext.emit()
 
@@ -519,7 +515,6 @@ class SimulationControl(QMainWindow):
             policy = self.policyCombo.currentText()
             learningFunction = self.learningFunctionCombo.currentText()
 
-            # Add the collected data to the list of added agents
             self.addedAgents.append((startCoords, policy, learningFunction, alpha, gamma))
             self.startCoordInput.clear()
             self.alphaInput.clear()
@@ -619,6 +614,7 @@ class SimulationControl(QMainWindow):
         self.skipBtn.setEnabled(True)
         self.speedSlider.setEnabled(True)
         self.created = True
+        self.initChartsDataTab()
 
     def initBlankWorldPreview(self, size, agents=[], pickups=[], dropoffs=[]):
         self.clearLayout(self.worldPreviewLayout)
@@ -708,16 +704,6 @@ class SimulationControl(QMainWindow):
 
 #########
     def setupQTablesDisplayTab(self):
-        self.q_tables = {
-            "Agent 1": {
-                "pd_string1": {("1,2", False, "Action1"): -1, ("State1", False, "Action2"): -2},
-                "pd_string2": {("State1", True, "Action1"): 1, ("State1", True, "Action2"): 2},
-            },
-            "Agent 2": {
-                "pd_string1": {("State2", False, "Action1"): -3, ("State2", False, "Action2"): -4},
-                "pd_string2": {("State2", True, "Action1"): 3, ("State2", True, "Action2"): 4},
-            }
-        }
         layout = QVBoxLayout()
 
         self.agentSelectCombo = QComboBox()
@@ -727,49 +713,85 @@ class SimulationControl(QMainWindow):
         layout.addWidget(self.pdStringSelectCombo)
 
         self.qTableWidget = QTableWidget()
-        self.qTableWidget.setRowCount(0)  # Start with no rows
-        self.qTableWidget.setColumnCount(4)  # Assuming columns: State (x,y), Has Item, Action, Value
+        self.qTableWidget.setRowCount(0)
+        self.qTableWidget.setColumnCount(4)
         self.qTableWidget.setHorizontalHeaderLabels(['State', 'Has Item', 'Action', 'Value'])
+        self.qTableWidget.setSortingEnabled(True)
+        header = self.qTableWidget.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)
+        font = header.font()
+        font.setBold(True)
+        header.setFont(font)
+
         layout.addWidget(self.qTableWidget)
-
         self.qTablesDisplayTab.setLayout(layout)
-        self.populateComboboxes()
+        try:
+            self.populateComboboxes(self.tabagents)
+        except:
+            return
 
-    def populateComboboxes(self):
-        # Clear existing items
+    def initializeQTableWidget(self):
+        world_size = self.tabenv.get_size()
+        self.builtQtable = True
+        actions = self.tabenv.get_actions()
+        self.qTableWidget.setRowCount(world_size * world_size * 2 * len(actions))
+        row = 0
+        for x in range(world_size):
+            for y in range(world_size):
+                for has_item in [False, True]:
+                    for action in actions:
+                        state_str = f"({x},{y})"
+                        has_item_str = "True" if has_item else "False"
+                        self.qTableWidget.setItem(row, 0, QTableWidgetItem(state_str))
+                        self.qTableWidget.setItem(row, 1, QTableWidgetItem(has_item_str))
+                        self.qTableWidget.setItem(row, 2, QTableWidgetItem(action))
+                        self.qTableWidget.setItem(row, 3, QTableWidgetItem("--"))
+                        row += 1
+
+        self.qTableWidget.resizeColumnsToContents()
+
+    def populateComboboxes(self, agents):
+        if not self.builtQtable:
+            self.initializeQTableWidget()
+        self.tabagents = agents
         self.agentSelectCombo.clear()
-        self.agentSelectCombo.addItems(self.q_tables.keys())  # Adding agent names to the combobox
+        self.agentSelectCombo.addItems([f"Agent {i}" for i in range(len(self.tabagents))])
+        if self.tabagents:
+            self.updatePdStringDropdown()
 
-        # Connect signals to slots to update the pd_string dropdown and display the Q-table
         self.agentSelectCombo.currentIndexChanged.connect(self.updatePdStringDropdown)
         self.pdStringSelectCombo.currentIndexChanged.connect(self.displayQTable)
 
-        # Initially populate pd_string combobox and display Q-table for the first selections
-        self.updatePdStringDropdown()
-
     def updatePdStringDropdown(self):
-        # Clear and repopulate the pd_string combobox based on selected agent
         self.pdStringSelectCombo.clear()
-        selected_agent = self.agentSelectCombo.currentText()
-        if selected_agent in self.q_tables:
-            pd_strings = self.q_tables[selected_agent].keys()
+        selected_index = self.agentSelectCombo.currentIndex()
+        if 0 <= selected_index < len(self.tabagents):
+            selected_agent = self.tabagents[selected_index]
+            pd_strings = list(selected_agent.return_q_dicts().keys())
             self.pdStringSelectCombo.addItems(pd_strings)
             self.displayQTable()
 
     def displayQTable(self):
-        selected_agent = self.agentSelectCombo.currentText()
+        agent_index = self.agentSelectCombo.currentIndex()
         pd_string = self.pdStringSelectCombo.currentText()
-        if selected_agent and pd_string:
-            qtable = self.q_tables[selected_agent].get(pd_string, {})
+        if agent_index != -1 and pd_string:
+            selected_agent = self.tabagents[agent_index]
+            qtable = selected_agent.return_q_dicts().get(pd_string, {})
             self.qTableWidget.setRowCount(len(qtable))
             for row, ((state, has_item, action), value) in enumerate(qtable.items()):
+
                 self.qTableWidget.setItem(row, 0, QTableWidgetItem(str(state)))
                 self.qTableWidget.setItem(row, 1, QTableWidgetItem(str(has_item)))
                 self.qTableWidget.setItem(row, 2, QTableWidgetItem(str(action)))
-                self.qTableWidget.setItem(row, 3, QTableWidgetItem(str(value)))
+                self.qTableWidget.setItem(row, 3, QTableWidgetItem(str(round(value, 3))))
             self.qTableWidget.resizeColumnsToContents()
         else:
             self.qTableWidget.setRowCount(0)
+
+        if self.pdStringSelectCombo.count() == 1:
+            self.pdStringSelectCombo.setEnabled(False)  # Disable dropdown if only one option
+        else:
+            self.pdStringSelectCombo.setEnabled(True)
 
 #########
 class MockSimulationControl:
