@@ -79,13 +79,6 @@ class SimulationControl(QMainWindow):
             if self.tabs.widget(index) == self.qTableTab:
                 self.populateComboboxes(self.tabagents)
 
-    """def squareResizeEvent(self, event):
-        # Assuming a square aspect ratio
-        new_size = min(self.size().width() * 0.5, self.size().height() * 0.5)
-        self.simulationDisplay.setFixedSize(QSize(new_size, new_size))
-        self.previewWorldDisplay.setFixedSize(QSize(new_size, new_size))
-        super().resizeEvent(event)"""
-
     def initWorldCreationTab(self):
         screen = QApplication.primaryScreen().size()
         new_size = min(self.size().width() * 0.5, self.size().height() * 0.5)
@@ -876,6 +869,9 @@ class SimulationControl(QMainWindow):
             self.displayQTable()
 
     def displayQTable(self):
+        self.qTableWidget.clearContents()
+        self.qTableWidget.setRowCount(0)
+
         agent_index = self.agentSelectCombo.currentIndex()
         pd_string = self.pdStringSelectCombo.currentText()
         if 0 <= agent_index < len(self.tabagents) and pd_string:
@@ -903,7 +899,7 @@ class SimulationControl(QMainWindow):
                 self.qTableWidget.setItem(row, 3, value_item)
         else:
             self.qTableWidget.setRowCount(0)
-        self.qTableWidget.resizeColumnsToContents()
+
 
         if self.pdStringSelectCombo.count() == 1:
             self.pdStringSelectCombo.setEnabled(False)  # Disable dropdown if only one option
