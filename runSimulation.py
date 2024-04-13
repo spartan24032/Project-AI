@@ -8,9 +8,9 @@ class SimulationWorker(QObject):
     # self.agents, env, episode, step, self.r, episode_based, totalsteps
     update_display = pyqtSignal(object, object, int, int, int, bool, int)
     # idx, agent_buffer, valid_actions_current, pd_string_buffer (list), action, reward
-    update_qtable_display = pyqtSignal(int, object, list, list, str, int)
+    update_qtable_display = pyqtSignal(int, object, list, list, str, float)
     # total_steps, total_reward, total_collisions
-    episode_end = pyqtSignal(int, int, int)
+    episode_end = pyqtSignal(float, float, int)
     requestPause = pyqtSignal()
     requestPlay = pyqtSignal(int)
     requestNext = pyqtSignal()
@@ -109,10 +109,11 @@ class SimulationWorker(QObject):
                 # Get valid actions for the CURRENT state, before action is chosen
                 valid_actions_current = self.env.valid_actions(agent.get_state(), self.agents)
                 action = agent.choose_action(valid_actions_current, pd_string, step, episode, self.episode_based)
+                self.check_for_blockages(agent, valid_actions_current, pd_string)
                 if verbose:
                     print(f"\033[91mAgent {idx}\033[0m {old_state}, Valid Actions: {valid_actions_current}")
                     self.agents[idx].display_q_values(pd_string)
-                reward = self.env.step(agent, action)  # Perform the action, moving to the new state
+                reward = self.env.step(agent, action, self.agents)  # Perform the action, moving to the new state
                 pd_string = self.env.generate_pd_string(self.additional_state, agent.get_state(), self.agents)
                 step += 1
                 self.totalsteps += 1
@@ -134,11 +135,12 @@ class SimulationWorker(QObject):
                                       new_has_item, new_pd_string, next_action)
 
                 actions_taken.append((idx, action, reward, new_state, valid_actions_current))
-                # check_for_blockages(self, agent, valid_actions, pd_string)
-                self.check_for_blockages(agent, valid_actions_current, pd_string)
-            for idx, agent in enumerate(self.agents):
-                pd_string = self.env.generate_pd_string(self.additional_state, agent.get_state(), self.agents)
                 next_pd_buffer.append(pd_string)
+                # check_for_blockages(self, agent, valid_actions, pd_string)
+
+            """for idx, agent in enumerate(self.agents):
+                pd_string = self.env.generate_pd_string(self.additional_state, agent.get_state(), self.agents)
+                next_pd_buffer.append(pd_string)"""
             if not self.mskip:
                 if self.skipTo is not None:
                     if self.episode_based and episode > (int(self.skipTo) - 1):

@@ -108,7 +108,7 @@ class GridWorld:
             self.grid[dropoff] = 'D'
             self.dropoffs[dropoff] = 0 # empty dropoffs
 
-    def step(self, agent, action):
+    def step(self, agent, action, agents):
         """
         Applies an action taken by an agent and updates environment state
 
@@ -117,25 +117,45 @@ class GridWorld:
         """
         current_state, has_item = agent.get_state()
         x, y = current_state
-        reward = -1  # Default action cost
+        reward = -1  # Default action cost for moving
 
-        # Handling movement actions
-        if action == 'N': x -= 1
-        elif action == 'S': x += 1
-        elif action == 'E': y += 1
-        elif action == 'W': y -= 1
-        elif action == 'pickup':
+        # Determine new position based on the action
+        if action == 'N':
+            x -= 1
+        elif action == 'S':
+            x += 1
+        elif action == 'E':
+            y += 1
+        elif action == 'W':
+            y -= 1
+        new_state = (x, y)
+
+        # Handle pickup/dropoff actions
+        if action == 'pickup':
             agent.update_state(current_state, True)
             self.pickups[current_state] -= 1
-            reward = 13
+            reward = 13  # Reward for successful pickup
         elif action == 'dropoff':
             self.dropoffs[current_state] += 1
             agent.update_state(current_state, False)
-            reward = 13
+            reward = 13  # Reward for successful dropoff
 
-        new_state = (x, y)
+        # Get positions of all other agents to check for proximity
+        occupied_positions = [other_agent.get_state()[0] for other_agent in agents if other_agent != agent]
 
-        # If movement action, update agent's position
+        # Check for adjacent agents and apply penalty
+        adjacent_positions = [
+            (new_state[0] - 1, new_state[1]),  # North
+            (new_state[0] + 1, new_state[1]),  # South
+            (new_state[0], new_state[1] - 1),  # West
+            (new_state[0], new_state[1] + 1)  # East
+        ]
+        for pos in adjacent_positions:
+            if pos in occupied_positions:
+                reward -= 0.5  # Apply penalty for being adjacent to another agent
+                break  # Exit loop once the penalty is applied once
+
+        # Update agent's position if the action was a move
         if action in ['N', 'S', 'E', 'W']:
             agent.update_state(new_state, has_item)
 
