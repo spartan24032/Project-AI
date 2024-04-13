@@ -38,7 +38,7 @@ class SimulationWorker(QObject):
         self.mskip = mskip
         self.totalsteps = 0
     def print_excel(self):
-            excel_writer = pd.ExcelWriter('Q_EXP3_Complex_SEED_2_Alpha_0.45_PRANDOM_500_PEXPLOIT_8500.xlsx', engine='xlsxwriter')
+            excel_writer = pd.ExcelWriter('Q_EXP1_COMPLEX_SEED_1_PRANDOM_500_PGREEDY_8500.xlsx', engine='xlsxwriter')
 
             for num, agent in enumerate(self.agents):
                 for q_table in agent.Q_dicts.keys():
