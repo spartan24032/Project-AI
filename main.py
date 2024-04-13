@@ -17,11 +17,15 @@ if __name__ == "__main__":
     pickups = {  # {(coordinate): starting capacity}
         (0,2): dropoffCapacity, (1,3): dropoffCapacity, (0,4): dropoffCapacity
                 }
+    # pickups_alt = { # Alternate pickup locations to change mid-run
+    #     (4,2): dropoffCapacity, (3,3): dropoffCapacity, (2,4): dropoffCapacity
+    #             }
     dropoffs = {  # {(coordinate): starting inventory}
         (3,0): 0, (2,0): 0, (3,4): 0
     }
     
     env = GridWorld(size, pickups, dropoffs, dropoffCapacity)
+    # env = GridWorld(size, pickups, dropoffs, dropoffCapacity, pickups_alt)
 
     complex_world2 = False  # This uses a different state for each config of dropoff and pickup.
                             # It is great at finding the optimal policy, but uses 64x memory.
@@ -32,13 +36,11 @@ if __name__ == "__main__":
     a = env.actions
     agents = [
         # alpha = learning rate , gamma = discount factor
-        Agent(a, start_state=(0,0), policy=PExploit, learning_algorithm="Q-learning", alpha=0.7, gamma=0.8,
-              override_policy=PRandom, override_max_step=500),
-        #Agent(a, start_state=(1,1), policy = PExploit, alpha=0.5, gamma=0.3),
-        #Agent(a, start_state=(4,4), policy=PExploit, alpha=0.3, gamma=0.5)
+        Agent(a, start_state=(1,1), policy = PRandom, alpha=0.3, gamma=0.5, override_policy=PExploit, override_max_step=500),
+        Agent(a, start_state=(4,4), policy=PRandom, alpha=0.3, gamma=0.5, override_policy=PExploit, override_max_step=500),
+        Agent(a, start_state=(0,0), policy=PRandom, alpha=0.3, gamma=0.5, override_policy=PExploit, override_max_step=500)
     ]
-    r = 50
+    r = 6
     sim_control = MockSimulationControl() # This is a mock control class that does nothing, allows code to run without UI
     simulationWorker = SimulationWorker(agents, env, complex_world2, episode_based, r, mskip = True)
     simulationWorker.run_simulation()
-            

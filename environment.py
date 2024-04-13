@@ -2,15 +2,18 @@
 import numpy as np
 
 class GridWorld:
-    def __init__(self, size, pickups=None, dropoffs=None, dropoffCapacity = 5):
+    def __init__(self, size, pickups=None, dropoffs=None, dropoffCapacity = 5, pickups_alt=None):
         self.size = size
         self.actions = ['N', 'E', 'S', 'W', 'pickup', 'dropoff']
         self.dropoffStorage = dropoffCapacity
         if pickups is None:
             pickups = {(2, 2): self.dropoffStorage}
+        if pickups_alt is None:
+            pickups_alt = {}
         if dropoffs is None:
             dropoffs = {(4, 4): 0}
         self.pickups = pickups
+        self.pickups_alt = pickups_alt
         self.dropoffs = dropoffs
         self.used_dropoffs = set()
         self.grid = np.zeros((self.size, self.size), dtype=str)
@@ -33,7 +36,7 @@ class GridWorld:
         else:
             return '5'
 
-    def reset(self):
+    def reset(self, episode=0):
         """
         Resets the environment for a new episode. 
         This includes resetting pickup and dropoff locations + capacaties
@@ -42,6 +45,8 @@ class GridWorld:
         self.grid = np.zeros((self.size, self.size), dtype=str)
         # Mark pickups and dropoffs on the grid
         self.used_dropoffs.clear()
+        if len(self.pickups_alt) > 0 and episode == 3: # If pickups_alt is given, change pickup locations on 4th episode (for experiment 4)
+            self.pickups = self.pickups_alt
         for pickup in self.pickups:
             self.grid[pickup] = 'P'
             self.pickups[pickup] = self.dropoffStorage

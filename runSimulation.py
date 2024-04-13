@@ -38,7 +38,7 @@ class SimulationWorker(QObject):
         self.mskip = mskip
         self.totalsteps = 0
     def print_excel(self):
-            excel_writer = pd.ExcelWriter('Q_EXP3_Complex_SEED_2_Alpha_0.45_PRANDOM_500_PEXPLOIT_8500.xlsx', engine='xlsxwriter')
+            excel_writer = pd.ExcelWriter('Q_EXP4_Simple_SEED_1_Alpha_0.3PRANDOM_500_PEXPLOIT_8500.xlsx', engine='xlsxwriter')
 
             for num, agent in enumerate(self.agents):
                 for q_table in agent.Q_dicts.keys():
@@ -104,7 +104,7 @@ class SimulationWorker(QObject):
 
     def core_logic(self, episode):
         episode += 1
-        self.env.reset()
+        self.env.reset(episode)
         pd_string = self.env.generate_pd_string(self.complex_world2)
         for agent in self.agents:
             agent.reset(pd_string)
