@@ -472,33 +472,43 @@ class SimulationControl(QMainWindow):
         for row in range(size):
             for col in range(size):
                 cell_label = self.worldStateGrid.itemAtPosition(row, col).widget()
-                base_content = ' '
-                cell_style = "QLabel { font-weight: bold; border: 1px solid black; "
-                cell_style += "background-color: white; color: black; "
+                cell_label.setTextFormat(Qt.RichText)
+                # Default background for empty cells
+                bg_color = "#ffffff"  # Default white background
 
-                # Check for pickups and dropoffs
+                base_content = "&nbsp;"  # Non-breaking space
+
                 if (row, col) in pickups:
-                    base_content = f'P{pickups[(row, col)]}'
-                    cell_style += "background-color: #ff6b6b; color: white; "  # Light blue background
+                    base_content = f"<div style = 'font-size: larger; font-weight: bold;'>P{pickups[(row, col)]}</div>"
+                    bg_color = "#ff6b6b"
                 elif (row, col) in dropoffs:
-                    base_content = f'D{dropoffs[(row, col)]}'
-                    cell_style += "background-color: #36bf34; color: white; "  # Green background
+                    base_content = f"<div style = 'font-size: larger; font-weight: bold;'>P{dropoffs[(row, col)]}</div>"
+                    bg_color = "#36bf34"  # Green for dropoffs
+
+                cell_label.setStyleSheet(f"QLabel {{ background-color: {bg_color}; border: 1px solid black; }}")
 
                 # Overlay agents
                 for idx, agent in enumerate(agents):
                     agent_state, has_item = agent.get_state()
                     if agent_state == (row, col):
+                        agent_color = self.agent_colors[idx]  # Get agent-specific color
                         agent_mark = 'C' if has_item else 'A'
                         agent_id = str(idx)
-                        agent_color = self.agent_colors[idx]
-                        base_content = f"{agent_mark}{agent_id}"
-                        cell_style += f"background-color: {agent_color}; color: white; "
-                        break
-
-                cell_style += "}"
+                        # Adjust the agent div to fill more of the cell
+                        base_content = (
+                            f"<div style='"
+                            f"background-color: {agent_color}; color: white;"
+                            f"display: flex; flex-direction: column; align-items: center; justify-content: center; "
+                            f"font-size: 12px; font-weight: bold;"
+                            f"margin-top: 5px; margin-bottom: 5px; margin-right: 7px; margin-left: 7px;"
+                            f"'>"
+                            f"<span style='font-size: 18px;'>&nbsp;</span>"  
+                            f"<br>{agent_mark}{agent_id}<br>"  # Main text
+                            f"<span style='font-size: 18px;'>&nbsp;</span>"  
+                            f"</div>"
+                        )
 
                 cell_label.setText(base_content)
-                cell_label.setStyleSheet(cell_style)
 
     # idx, agent_buffer, valid_actions_current, pd_string, action, reward
     def updateQValuesDisplay(self, idx, agents, valid_actions, pd_string, action, reward):
