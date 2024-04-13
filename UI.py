@@ -461,6 +461,7 @@ class SimulationControl(QMainWindow):
 
         self.worldStateContainer.setFixedSize(int(new_size*0.9), int(new_size*0.9))
 
+
     def updateDisplay(self, agents, env, ep, step, r, ep_based, totalsteps):
         self.tabagents = agents
         self.tabenv = env
@@ -472,43 +473,33 @@ class SimulationControl(QMainWindow):
         for row in range(size):
             for col in range(size):
                 cell_label = self.worldStateGrid.itemAtPosition(row, col).widget()
-                cell_label.setTextFormat(Qt.RichText)
-                # Default background for empty cells
-                bg_color = "#ffffff"  # Default white background
+                base_content = ' '
+                cell_style = "QLabel { font-weight: bold; border: 1px solid black; "
+                cell_style += "background-color: white; color: black; "
 
-                base_content = "&nbsp;"  # Non-breaking space
-
+                # Check for pickups and dropoffs
                 if (row, col) in pickups:
-                    base_content = f"<div style = 'font-size: larger; font-weight: bold;'>P{pickups[(row, col)]}</div>"
-                    bg_color = "#ff6b6b"
+                    base_content = f'P{pickups[(row, col)]}'
+                    cell_style += "background-color: #ff6b6b; color: white; "  # Light blue background
                 elif (row, col) in dropoffs:
-                    base_content = f"<div style = 'font-size: larger; font-weight: bold;'>P{dropoffs[(row, col)]}</div>"
-                    bg_color = "#36bf34"  # Green for dropoffs
-
-                cell_label.setStyleSheet(f"QLabel {{ background-color: {bg_color}; border: 1px solid black; }}")
+                    base_content = f'D{dropoffs[(row, col)]}'
+                    cell_style += "background-color: #36bf34; color: white; "  # Green background
 
                 # Overlay agents
                 for idx, agent in enumerate(agents):
                     agent_state, has_item = agent.get_state()
                     if agent_state == (row, col):
-                        agent_color = self.agent_colors[idx]  # Get agent-specific color
                         agent_mark = 'C' if has_item else 'A'
                         agent_id = str(idx)
-                        # Adjust the agent div to fill more of the cell
-                        base_content = (
-                            f"<div style='"
-                            f"background-color: {agent_color}; color: white;"
-                            f"display: flex; flex-direction: column; align-items: center; justify-content: center; "
-                            f"font-size: 12px; font-weight: bold;"
-                            f"margin-top: 5px; margin-bottom: 5px; margin-right: 7px; margin-left: 7px;"
-                            f"'>"
-                            f"<span style='font-size: 18px;'>&nbsp;</span>"  
-                            f"<br>{agent_mark}{agent_id}<br>"  # Main text
-                            f"<span style='font-size: 18px;'>&nbsp;</span>"  
-                            f"</div>"
-                        )
+                        base_content = f"{agent_mark}{agent_id}"
+                        agent_color = self.agent_colors[idx]  # Get agent-specific color
+                        cell_style += f"background-color: {agent_color}; color: white;"
+                        break
+
+                cell_style += "}"
 
                 cell_label.setText(base_content)
+                cell_label.setStyleSheet(cell_style)
 
     # idx, agent_buffer, valid_actions_current, pd_string, action, reward
     def updateQValuesDisplay(self, idx, agents, valid_actions, pd_string, action, reward):
@@ -540,13 +531,20 @@ class SimulationControl(QMainWindow):
         self.qValuesLayout.addStretch()  # Ensures content is top-aligned
 
     def updateAgentLabel(self, idx, text):
+        color = self.agent_colors[idx]
+        if self.is_light_color(color):
+            textC = '#dedede'
+        else:
+            textC = 'black'
         if idx >= len(self.agentLabels):
             for _ in range(len(self.agentLabels), idx + 1):
                 label = QLabel()
-                label.setStyleSheet("margin: 5px; padding: 5px; border: 1px solid black; background-color: #fcba03;")
+                label.setStyleSheet(f"margin: 5px; padding: 5px; border: 1px solid black; background-color: {color}; color:{textC};")
                 self.qValuesLayout.addWidget(label)
                 self.agentLabels.append(label)
         self.agentLabels[idx].setText(text)
+
+
 
     def onNextClicked(self):
         if self.simulationWorker:
@@ -585,6 +583,12 @@ class SimulationControl(QMainWindow):
         """Generate random colors in hexadecimal format."""
         return '#%06x' % random.randint(0, 0xFFFFFF)
 
+    def is_light_color(self, hex_color):
+        color = QColor(hex_color)
+        # Calculate perceptive luminance according to ITU-R BT.709
+        luminance = (0.2126 * color.red() + 0.7152 * color.green() + 0.0722 * color.blue()) / 255
+        return luminance < 0.30
+
     def assign_colors_to_agents(self, number_of_agents):
         """Assign a unique random color to each agent index."""
         predefined_colors = ['#242424', '#f52c2c', '#3666f5']  # Black, Red, Blue
@@ -594,7 +598,6 @@ class SimulationControl(QMainWindow):
             self.agent_colors = predefined_colors + [self.generate_random_color() for _ in
                                                      range(number_of_agents - len(predefined_colors))]
 
-        #return [self.generate_random_color() for _ in range(number_of_agents)]
 
 ########
 

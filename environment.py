@@ -45,8 +45,6 @@ class GridWorld:
             return '5'
 
     def reset(self, episode):
-        print(f"called reset, episode {episode}")
-        print(f"current key change episodes {self.keyChangeEpisodes}")
         """
         Resets the environment for a new episode. 
         This includes resetting pickup and dropoff locations + capacaties
