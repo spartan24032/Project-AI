@@ -16,11 +16,12 @@ from runSimulation import SimulationWorker
 import random
 
 # Example preset data
-alpha = '0.45'
+alpha = '0.3'
+Type =("PRandom","PExploit","PGreedy")
 PRESET_AGENTS = [
-    ("(0,2)", "PExploit", "Q-learning", alpha, "0.5"),
-    ("(2,2)", "PExploit", "Q-learning", alpha, "0.5"),
-    ("(4,2)", "PExploit", "Q-learning", alpha, "0.5"),
+    ("(0,2)", Type[2], "Q-learning", alpha, "0.5"),
+    ("(2,2)", Type[2], "Q-learning", alpha, "0.5"),
+    ("(4,2)", Type[2], "Q-learning", alpha, "0.5"),
 ]
 PRESET_PICKUPS = ["(0,4)", "(1,3)", "(4,1)"]
 PRESET_DROPOFFS = ["(0,0)", "(2,0)", "(3,4)"]

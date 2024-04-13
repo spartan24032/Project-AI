@@ -8,4 +8,4 @@
 .idea/vcs.xml
 .idea/inspectionProfiles/Project_Default.xml
 __pycache__
-agents_*.xlsx
+*.xlsx
