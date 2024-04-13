@@ -121,7 +121,7 @@ class SimulationControl(QMainWindow):
         self.proximityWorldCheck = QCheckBox("Use 8-state proximity sensing memory space", self)
         layout.addWidget(self.proximityWorldCheck)
 
-        self.proximityPunishCheck = QCheckBox("Punish agents for touching another agent", self)
+        self.proximityPunishCheck = QCheckBox("Punish agents if touching another agent", self)
         layout.addWidget(self.proximityPunishCheck)
 
         worldSizeLayout = QHBoxLayout()

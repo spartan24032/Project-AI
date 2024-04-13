@@ -52,7 +52,7 @@ class GridWorld:
             else:
                 state, has_item = current_position
                 x, y = state
-                max_distance = 1  # Check up to two blocks
+                max_distance = 2  # Check up to two blocks
                 if flip:
                     max_distance = 1
                 directions = {
@@ -158,7 +158,7 @@ class GridWorld:
             ]
             for pos in adjacent_positions:
                 if pos in occupied_positions:
-                    reward -= 0.5  # Apply penalty for being adjacent to another agent
+                    reward -= 1  # Apply penalty for being adjacent to another agent
 
         # Update agent's position if the action was a move
         if action in ['N', 'S', 'E', 'W']:
