@@ -57,6 +57,7 @@ class SimulationControl(QMainWindow):
         self.keyChangeEpisodes = []
         self.initUI()
         self.masterskip = False
+        self.fallback_set = False
         self.created = False
 
     def initUI(self):
@@ -491,7 +492,10 @@ class SimulationControl(QMainWindow):
                     if agent_state == (row, col):
                         agent_mark = 'C' if has_item else 'A'
                         agent_id = str(idx)
-                        base_content = f"{agent_mark}{agent_id}"
+                        if base_content != ' ':
+                            base_content += f" / {agent_mark}{agent_id}"
+                        else:
+                            base_content = f"{agent_mark}{agent_id}"
                         agent_color = self.agent_colors[idx]  # Get agent-specific color
                         cell_style += f"background-color: {agent_color}; color: white;"
                         break
@@ -502,9 +506,14 @@ class SimulationControl(QMainWindow):
                 cell_label.setStyleSheet(cell_style)
 
     # idx, agent_buffer, valid_actions_current, pd_string, action, reward
+
     def updateQValuesDisplay(self, idx, agents, valid_actions, pd_string, action, reward):
+        if not self.fallback_set:
+            fallback_pd = pd_string
+            self.fallback_set = True
         if 0 <= idx < len(agents):
             agent = agents[idx]  # Access the specific agent
+            pd_string = pd_string[idx]
             Q_dicts = agent.return_q_dicts()
             policy = agent.get_policy()
             state, has_item = agent.get_state()
@@ -519,7 +528,7 @@ class SimulationControl(QMainWindow):
                 try:
                     q_value = Q_dicts[pd_string].get((state, has_item, action_key), "--")
                 except:
-                    return
+                    q_value = Q_dicts[fallback_pd].get((state, has_item, action_key), "--")
                 display_value = f"{q_value:.2f}" if q_value != "--" else "--"
                 q_values_text += f"    {action_key}: {display_value}\n"
             q_values_text += f"using policy: {policy}\n"
@@ -759,8 +768,10 @@ class SimulationControl(QMainWindow):
                 override_max_step=termination_step
             )
             agentInstances.append(agent)
-
-        complex_world2 = self.complexWorldCheck.isChecked()
+        if self.complexWorldCheck.isChecked():
+            complex_world2 = 2
+        else:
+            complex_world2 = 0
         episode_based = self.isEpisodeBased
         r = int(self.episodesOrStepsInput.text())
         # Run simulation

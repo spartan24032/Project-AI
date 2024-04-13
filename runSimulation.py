@@ -7,8 +7,8 @@ class SimulationWorker(QObject):
     finished = pyqtSignal()
     # self.agents, env, episode, step, self.r, episode_based, totalsteps
     update_display = pyqtSignal(object, object, int, int, int, bool, int)
-    # idx, agent_buffer, valid_actions_current, pd_string, action, reward
-    update_qtable_display = pyqtSignal(int, object, list, str, str, int)
+    # idx, agent_buffer, valid_actions_current, pd_string_buffer (list), action, reward
+    update_qtable_display = pyqtSignal(int, object, list, list, str, int)
     # total_steps, total_reward, total_collisions
     episode_end = pyqtSignal(int, int, int)
     requestPause = pyqtSignal()
@@ -20,7 +20,7 @@ class SimulationWorker(QObject):
         super().__init__()
         self.agents = agents
         self.env = env
-        self.complex_world2 = complex_world2
+        self.additional_state = complex_world2 # 0 - none, 1 - complex_world2, 2- 8-state proximity
         self.episode_based = episode_based
         self.r = r
         self.paused = True
@@ -64,8 +64,10 @@ class SimulationWorker(QObject):
         episode += 1
         self.blockage_count = 0
         self.env.reset(episode)
-        pd_string = self.env.generate_pd_string(self.complex_world2)
+        pd_string = self.env.generate_pd_string(self.additional_state)
+        next_pd_buffer = []
         for agent in self.agents:
+            next_pd_buffer.append(pd_string)
             agent.reset(pd_string)
 
         # use verbose to control which episodes get output
@@ -86,11 +88,12 @@ class SimulationWorker(QObject):
             if verbose:
                 print(f"\nStep {step}")
                 self.env.render(self.agents)
-            pd_string = self.env.generate_pd_string(self.complex_world2)
             if self.skipTo is None:
                 agent_buffer = copy.deepcopy(self.agents)
                 environment_buffer = copy.deepcopy(self.env)
-                pd_buffer = copy.deepcopy(pd_string)
+
+                pd_buffer = copy.deepcopy(next_pd_buffer)
+                next_pd_buffer = []
                 self.update_display.emit(
                     agent_buffer, environment_buffer, episode, step, self.r, self.episode_based, self.totalsteps
                 )
@@ -101,6 +104,7 @@ class SimulationWorker(QObject):
                     print(f"\nStep {step + 1}")
                     self.env.render(self.agents)
                     print(f"All dropoffs complete.\nTotal Reward for Episode {episode + 1}: {total_reward}\n")
+                pd_string = self.env.generate_pd_string(self.additional_state, agent.get_state(), self.agents)
                 old_state, old_has_item = agent.get_state()
                 # Get valid actions for the CURRENT state, before action is chosen
                 valid_actions_current = self.env.valid_actions(agent.get_state(), self.agents)
@@ -109,6 +113,7 @@ class SimulationWorker(QObject):
                     print(f"\033[91mAgent {idx}\033[0m {old_state}, Valid Actions: {valid_actions_current}")
                     self.agents[idx].display_q_values(pd_string)
                 reward = self.env.step(agent, action)  # Perform the action, moving to the new state
+                pd_string = self.env.generate_pd_string(self.additional_state, agent.get_state(), self.agents)
                 step += 1
                 self.totalsteps += 1
                 total_reward += reward
@@ -119,17 +124,21 @@ class SimulationWorker(QObject):
 
                 # Now, get valid actions for the NEW state, after action is performed
                 new_state, new_has_item = agent.get_state()  # This is effectively 'next_state' for Q-value update
+                packed_state = new_state, new_has_item
                 valid_actions_next = self.env.valid_actions(agent.get_state(), self.agents)
+                new_pd_string = self.env.generate_pd_string(self.additional_state, packed_state, self.agents)
                 # next_action is only for SARSA as it needs the future action based on policy
-                next_action = agent.choose_action(valid_actions_next, pd_string, step, episode, self.episode_based)
+                next_action = agent.choose_action(valid_actions_next, new_pd_string, step, episode, self.episode_based)
                 # Update Q-values using 'old_state' as current and 'new_state' as next
                 agent.update_q_values(old_state, old_has_item, action, valid_actions_next, reward, new_state,
-                                      new_has_item, pd_string, next_action)
+                                      new_has_item, new_pd_string, next_action)
 
                 actions_taken.append((idx, action, reward, new_state, valid_actions_current))
                 # check_for_blockages(self, agent, valid_actions, pd_string)
                 self.check_for_blockages(agent, valid_actions_current, pd_string)
-
+            for idx, agent in enumerate(self.agents):
+                pd_string = self.env.generate_pd_string(self.additional_state, agent.get_state(), self.agents)
+                next_pd_buffer.append(pd_string)
             if not self.mskip:
                 if self.skipTo is not None:
                     if self.episode_based and episode > (int(self.skipTo) - 1):

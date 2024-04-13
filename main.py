@@ -23,8 +23,9 @@ if __name__ == "__main__":
     
     env = GridWorld(size, pickups, dropoffs, dropoffCapacity)
 
-    complex_world2 = True  # This uses a different state for each config of dropoff and pickup.
+    complex_world2 = 1   # This uses a different state for each config of dropoff and pickup.
                             # It is great at finding the optimal policy, but uses 64x memory.
+                            # 0 = nothing, 1 = complex_world2, 3= 8-state proximity checking
     episode_based = False  # This chooses if we are using episodes or steps to run the simulation
                            # False = steps, True = episodes
     #  "r" will either be episodes to run or total steps to run, depending on this value.

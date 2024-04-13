@@ -35,13 +35,44 @@ class GridWorld:
     def dropoffs_complete(self):
         return all(capacity == self.dropoffStorage for capacity in self.dropoffs.values())
 
-    def generate_pd_string(self, usage=False):
-        if usage:
+    def generate_pd_string(self, usage=0, current_position=None, agents=None):
+        if usage == 1: # complex_world2 (pd_strings)
             # Generates binary string-- 1 = available pickup/dropoff, 0 = unavailable
             pickups_str = ''.join('1' if capacity > 0 else '0' for capacity in self.pickups.values())
             dropoffs_str = ''.join('1' if count < self.dropoffStorage else '0' for count in self.dropoffs.values())
             return pickups_str + dropoffs_str
-        else:
+        if usage == 2: # 8-state proximity checking
+            if current_position == None:
+                return 'N0 S0 E0 W0'
+            state, has_item = current_position
+            x, y = state
+
+            max_distance = 2  # Check up to two blocks
+            directions = {
+                'N': [(x - i, y) for i in range(1, max_distance + 1)],
+                'S': [(x + i, y) for i in range(1, max_distance + 1)],
+                'E': [(x, y + i) for i in range(1, max_distance + 1)],
+                'W': [(x, y - i) for i in range(1, max_distance + 1)]
+            }
+
+            # List of occupied positions based on agents' current states
+            occupied_positions = [agent.get_state()[0] for agent in agents if agent.get_state()[0] != current_position]
+            proximity_str = ""
+            for direction in ['N', 'S', 'E', 'W']:
+                found_agent = '0'
+                for pos in directions[direction]:
+                    nx, ny = pos
+                    # Check if the position is within grid bounds
+                    if 0 <= nx < self.size and 0 <= ny < self.size:
+                        # Check if any agent is at the position (nx, ny)
+                        if (nx, ny) in occupied_positions:
+                            found_agent = '1'
+                            break
+                proximity_str += f"{direction}{found_agent} "
+
+            return proximity_str.strip()
+
+        else: # nothing
             return '5'
 
     def reset(self, episode):
