@@ -237,12 +237,11 @@ class SimulationControl(QMainWindow):
         self.addedPickupDropoffDisplay = QLabel("Added Pickup/Dropoff Pairs: None")
         layout.addWidget(self.addedPickupDropoffDisplay)
 
-
-
-
         self.togglePDOverridesBtn = QPushButton("Add P/D Override for Specific Episodes", self)
+        self.togglePDOverridesBtn.setMaximumWidth(int(screen.width() * 0.2))
         self.togglePDOverridesBtn.clicked.connect(self.togglePDOverrideInputs)
         layout.addWidget(self.togglePDOverridesBtn)
+
 
         # Container for P/D override inputs
         self.pdOverrideContainer = QWidget(self)
@@ -480,10 +479,10 @@ class SimulationControl(QMainWindow):
                 # Check for pickups and dropoffs
                 if (row, col) in pickups:
                     base_content = f'P{pickups[(row, col)]}'
-                    cell_style += "background-color: #3498db; color: white; "  # Light blue background
+                    cell_style += "background-color: #ff6b6b; color: white; "  # Light blue background
                 elif (row, col) in dropoffs:
                     base_content = f'D{dropoffs[(row, col)]}'
-                    cell_style += "background-color: #2ecc71; color: white; "  # Green background
+                    cell_style += "background-color: #36bf34; color: white; "  # Green background
 
                 # Overlay agents
                 for idx, agent in enumerate(agents):
@@ -491,8 +490,9 @@ class SimulationControl(QMainWindow):
                     if agent_state == (row, col):
                         agent_mark = 'C' if has_item else 'A'
                         agent_id = str(idx)
+                        agent_color = self.agent_colors[idx]
                         base_content = f"{agent_mark}{agent_id}"
-                        cell_style += "background-color: #e74c3c; color: white; "  # Red background for agent
+                        cell_style += f"background-color: {agent_color}; color: white; "
                         break
 
                 cell_style += "}"
@@ -570,6 +570,21 @@ class SimulationControl(QMainWindow):
     def updateSpeedValue(self, value):
         self.speedValueLabel.setText(str(value))
         print(f"Slider Value: {value}")
+
+    def generate_random_color(self):
+        """Generate random colors in hexadecimal format."""
+        return '#%06x' % random.randint(0, 0xFFFFFF)
+
+    def assign_colors_to_agents(self, number_of_agents):
+        """Assign a unique random color to each agent index."""
+        predefined_colors = ['#242424', '#f52c2c', '#3666f5']  # Black, Red, Blue
+        if number_of_agents < len(predefined_colors):
+            self.agent_colors = predefined_colors[:number_of_agents]
+        else:
+            self.agent_colors = predefined_colors + [self.generate_random_color() for _ in
+                                                     range(number_of_agents - len(predefined_colors))]
+
+        #return [self.generate_random_color() for _ in range(number_of_agents)]
 
 ########
 
@@ -737,6 +752,10 @@ class SimulationControl(QMainWindow):
         r = int(self.episodesOrStepsInput.text())
         # Run simulation
         self.initWorldStateGrid(size, agentInstances, pickups, dropoffs)
+
+        number_of_agents = len(agentInstances)  # Assuming 'agents' is your list of Agent objects
+        self.agent_colors = []
+        self.assign_colors_to_agents(number_of_agents)
 
         # (self, agents, complex_world2, episode_based, r, sim_control)
         # Create the thread and worker
