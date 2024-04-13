@@ -445,7 +445,7 @@ class SimulationControl(QMainWindow):
                 cellLabel.setFrameStyle(QFrame.Panel | QFrame.Sunken)
                 cellLabel.setAlignment(Qt.AlignCenter)
                 #cellLabel.setStyleSheet("border: 1px solid black;")
-                cellLabel.setFixedSize(int((new_size*0.89/size)), int((new_size*0.89/size)))
+                cellLabel.setFixedSize(int((new_size*0.8/size)), int((new_size*0.8/size)))
 
                 # Display agents, pickups, and dropoffs with specific styles
                 if (row, col) in agents:
@@ -460,7 +460,7 @@ class SimulationControl(QMainWindow):
 
                 self.worldStateGrid.addWidget(cellLabel, row, col)
 
-        self.worldStateContainer.setFixedSize(int(new_size*0.8), int(new_size*0.9))
+        self.worldStateContainer.setFixedSize(int(new_size*0.9), int(new_size*0.9))
 
     def updateDisplay(self, agents, env, ep, step, r, ep_based, totalsteps):
         self.tabagents = agents
