@@ -118,6 +118,12 @@ class SimulationControl(QMainWindow):
         self.complexWorldCheck = QCheckBox("Use Complex_World2 memory space", self)
         layout.addWidget(self.complexWorldCheck)
 
+        self.proximityWorldCheck = QCheckBox("Use 8-state proximity sensing memory space", self)
+        layout.addWidget(self.proximityWorldCheck)
+
+        self.proximityPunishCheck = QCheckBox("Punish agents for touching another agent", self)
+        layout.addWidget(self.proximityPunishCheck)
+
         worldSizeLayout = QHBoxLayout()
         worldSizeLabel = QLabel("World Size:")
         self.worldSizeInput = QLineEdit(self)
@@ -509,7 +515,7 @@ class SimulationControl(QMainWindow):
 
     def updateQValuesDisplay(self, idx, agents, valid_actions, pd_string, action, reward):
         if not self.fallback_set:
-            fallback_pd = pd_string
+            self.fallback_pd = str(pd_string)
             self.fallback_set = True
         if 0 <= idx < len(agents):
             agent = agents[idx]  # Access the specific agent
@@ -517,6 +523,8 @@ class SimulationControl(QMainWindow):
             Q_dicts = agent.return_q_dicts()
             policy = agent.get_policy()
             state, has_item = agent.get_state()
+            if str(pd_string) not in Q_dicts:
+                Q_dicts[str(pd_string)] = {}
 
             # Initialize the text for this agent's Q-values display
             q_values_text = (f"Agent {idx} at {state}, has item: {has_item}\n"
@@ -526,9 +534,10 @@ class SimulationControl(QMainWindow):
             q_values_text += "Q-values:\n"
             for action_key in agent.actions:
                 try:
-                    q_value = Q_dicts[pd_string].get((state, has_item, action_key), "--")
+                    q_value = Q_dicts[str(pd_string)].get((state, has_item, action_key), "--")
                 except:
-                    q_value = Q_dicts[fallback_pd].get((state, has_item, action_key), "--")
+                    pass
+                    # q_value = Q_dicts[str(self.fallback_pd)].get((state, has_item, action_key), "--")
                 display_value = f"{q_value:.2f}" if q_value != "--" else "--"
                 q_values_text += f"    {action_key}: {display_value}\n"
             q_values_text += f"using policy: {policy}\n"
@@ -723,13 +732,15 @@ class SimulationControl(QMainWindow):
         pickups = {self.parseCoordinateToTuple(coord): dropoffCapacity for coord in self.pickupCoords}
         dropoffs = {self.parseCoordinateToTuple(coord): initialDropoffInventory for coord in self.dropoffCoords}
 
+        proximityPunishment = self.proximityPunishCheck.isChecked()
+
         if self.OveridePickupCoords and self.OverrideDropoffCoords is not None:
             override_pickups = {self.parseCoordinateToTuple(coord): dropoffCapacity for coord in self.OveridePickupCoords}
             override_dropoffs = {self.parseCoordinateToTuple(coord): initialDropoffInventory for coord in self.OverrideDropoffCoords}
-            env = GridWorld(size, pickups, dropoffs, dropoffCapacity, self.keyChangeEpisodes, override_pickups, override_dropoffs)
+            env = GridWorld(size, pickups, dropoffs, dropoffCapacity,proximityPunishment, self.keyChangeEpisodes, override_pickups, override_dropoffs)
             # print(f"created override pd env with {override_dropoffs} and {override_pickups} and {keychangeEpisodes}")
         else:
-            env = GridWorld(size, pickups, dropoffs, dropoffCapacity)
+            env = GridWorld(size, pickups, dropoffs, dropoffCapacity, proximityPunishment)
         # env params: size, pickups, dropoff, dropoffCapacity, keyChangeEpisodes, flipP, flipD
 
         # Setup agents
@@ -768,10 +779,12 @@ class SimulationControl(QMainWindow):
                 override_max_step=termination_step
             )
             agentInstances.append(agent)
+        complex_world2 = 0 # 0 = nothing, 1 = state2, 2= proximity, 3=both
         if self.complexWorldCheck.isChecked():
-            complex_world2 = 2
-        else:
-            complex_world2 = 0
+            complex_world2 += 1
+        if self.proximityWorldCheck.isChecked():
+            complex_world2 += 2
+
         episode_based = self.isEpisodeBased
         r = int(self.episodesOrStepsInput.text())
         # Run simulation

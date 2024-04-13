@@ -2,7 +2,7 @@
 import numpy as np
 
 class GridWorld:
-    def __init__(self, size, pickups=None, dropoffs=None, dropoffCapacity = 5, keyChangeEpisodes=None, flipP=None, flipD=None):
+    def __init__(self, size, pickups=None, dropoffs=None, dropoffCapacity = 5, proximityPunishment=False, keyChangeEpisodes=None, flipP=None, flipD=None):
         self.size = size
         self.actions = ['N', 'E', 'S', 'W', 'pickup', 'dropoff']
         self.dropoffStorage = dropoffCapacity
@@ -21,6 +21,7 @@ class GridWorld:
         self.grid = np.zeros((self.size, self.size), dtype=str)
         #self.reset(int)
         self.noops = 0
+        self.proximityPunishment = proximityPunishment
 
     def get_actions(self):
         return self.actions
@@ -35,45 +36,50 @@ class GridWorld:
     def dropoffs_complete(self):
         return all(capacity == self.dropoffStorage for capacity in self.dropoffs.values())
 
-    def generate_pd_string(self, usage=0, current_position=None, agents=None):
-        if usage == 1: # complex_world2 (pd_strings)
+    def generate_pd_string(self, usage=0, current_position=None, agents=None, flip=False):
+
+        generated_string = ""
+        if usage == 0:
+            return '5'
+        if usage == 1 or usage == 3: # complex_world2 (pd_strings)
             # Generates binary string-- 1 = available pickup/dropoff, 0 = unavailable
             pickups_str = ''.join('1' if capacity > 0 else '0' for capacity in self.pickups.values())
             dropoffs_str = ''.join('1' if count < self.dropoffStorage else '0' for count in self.dropoffs.values())
-            return pickups_str + dropoffs_str
-        if usage == 2: # 8-state proximity checking
+            generated_string += pickups_str + dropoffs_str
+        if usage == 2 or usage == 3: # 8-state proximity checking
             if current_position == None:
-                return 'N0 S0 E0 W0'
-            state, has_item = current_position
-            x, y = state
+                generated_string += 'N0 S0 E0 W0'
+            else:
+                state, has_item = current_position
+                x, y = state
+                max_distance = 1  # Check up to two blocks
+                if flip:
+                    max_distance = 1
+                directions = {
+                    'N': [(x - i, y) for i in range(1, max_distance + 1)],
+                    'S': [(x + i, y) for i in range(1, max_distance + 1)],
+                    'E': [(x, y + i) for i in range(1, max_distance + 1)],
+                    'W': [(x, y - i) for i in range(1, max_distance + 1)]
+                }
 
-            max_distance = 2  # Check up to two blocks
-            directions = {
-                'N': [(x - i, y) for i in range(1, max_distance + 1)],
-                'S': [(x + i, y) for i in range(1, max_distance + 1)],
-                'E': [(x, y + i) for i in range(1, max_distance + 1)],
-                'W': [(x, y - i) for i in range(1, max_distance + 1)]
-            }
+                # List of occupied positions based on agents' current states
+                occupied_positions = [agent.get_state()[0] for agent in agents if agent.get_state()[0] != current_position]
+                proximity_str = ""
+                for direction in ['N', 'S', 'E', 'W']:
+                    found_agent = '0'
+                    for pos in directions[direction]:
+                        nx, ny = pos
+                        # Check if the position is within grid bounds
+                        if 0 <= nx < self.size and 0 <= ny < self.size:
+                            # Check if any agent is at the position (nx, ny)
+                            if (nx, ny) in occupied_positions:
+                                found_agent = '1'
+                                break
+                    proximity_str += f"{direction}{found_agent} "
 
-            # List of occupied positions based on agents' current states
-            occupied_positions = [agent.get_state()[0] for agent in agents if agent.get_state()[0] != current_position]
-            proximity_str = ""
-            for direction in ['N', 'S', 'E', 'W']:
-                found_agent = '0'
-                for pos in directions[direction]:
-                    nx, ny = pos
-                    # Check if the position is within grid bounds
-                    if 0 <= nx < self.size and 0 <= ny < self.size:
-                        # Check if any agent is at the position (nx, ny)
-                        if (nx, ny) in occupied_positions:
-                            found_agent = '1'
-                            break
-                proximity_str += f"{direction}{found_agent} "
+                generated_string += proximity_str.strip()
 
-            return proximity_str.strip()
-
-        else: # nothing
-            return '5'
+        return generated_string
 
     def reset(self, episode):
         """
@@ -142,18 +148,17 @@ class GridWorld:
 
         # Get positions of all other agents to check for proximity
         occupied_positions = [other_agent.get_state()[0] for other_agent in agents if other_agent != agent]
-
-        # Check for adjacent agents and apply penalty
-        adjacent_positions = [
-            (new_state[0] - 1, new_state[1]),  # North
-            (new_state[0] + 1, new_state[1]),  # South
-            (new_state[0], new_state[1] - 1),  # West
-            (new_state[0], new_state[1] + 1)  # East
-        ]
-        for pos in adjacent_positions:
-            if pos in occupied_positions:
-                reward -= 0.5  # Apply penalty for being adjacent to another agent
-                break  # Exit loop once the penalty is applied once
+        if self.proximityPunishment:
+            # Check for adjacent agents and apply penalty
+            adjacent_positions = [
+                (new_state[0] - 1, new_state[1]),  # North
+                (new_state[0] + 1, new_state[1]),  # South
+                (new_state[0], new_state[1] - 1),  # West
+                (new_state[0], new_state[1] + 1)  # East
+            ]
+            for pos in adjacent_positions:
+                if pos in occupied_positions:
+                    reward -= 0.5  # Apply penalty for being adjacent to another agent
 
         # Update agent's position if the action was a move
         if action in ['N', 'S', 'E', 'W']:

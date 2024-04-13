@@ -20,7 +20,7 @@ class SimulationWorker(QObject):
         super().__init__()
         self.agents = agents
         self.env = env
-        self.additional_state = complex_world2 # 0 - none, 1 - complex_world2, 2- 8-state proximity
+        self.additional_state = complex_world2 # 0 - none, 1 - complex_world2, 2- 8-state proximity, 3- both
         self.episode_based = episode_based
         self.r = r
         self.paused = True
@@ -122,12 +122,15 @@ class SimulationWorker(QObject):
                     print(f"  selecting: {action}, Reward: {reward}")
                 if self.skipTo is None:
                     self.update_qtable_display.emit(idx, agent_buffer, valid_actions_current, pd_buffer, action, reward)
+                agent.store_loop1(idx, old_state, old_has_item, action, reward, valid_actions_current, pd_string)
 
+            for idx, agent in enumerate(self.agents):
+                old_state, old_has_item, action, reward, valid_actions_current, pd_string = agent.get_loop1(idx)
                 # Now, get valid actions for the NEW state, after action is performed
                 new_state, new_has_item = agent.get_state()  # This is effectively 'next_state' for Q-value update
                 packed_state = new_state, new_has_item
                 valid_actions_next = self.env.valid_actions(agent.get_state(), self.agents)
-                new_pd_string = self.env.generate_pd_string(self.additional_state, packed_state, self.agents)
+                new_pd_string = self.env.generate_pd_string(self.additional_state, packed_state, self.agents, flip=True)
                 # next_action is only for SARSA as it needs the future action based on policy
                 next_action = agent.choose_action(valid_actions_next, new_pd_string, step, episode, self.episode_based)
                 # Update Q-values using 'old_state' as current and 'new_state' as next
@@ -136,7 +139,6 @@ class SimulationWorker(QObject):
 
                 actions_taken.append((idx, action, reward, new_state, valid_actions_current))
                 next_pd_buffer.append(pd_string)
-                # check_for_blockages(self, agent, valid_actions, pd_string)
 
             """for idx, agent in enumerate(self.agents):
                 pd_string = self.env.generate_pd_string(self.additional_state, agent.get_state(), self.agents)

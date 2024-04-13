@@ -9,6 +9,7 @@ class Agent:
         self.actions = actions  # Possible actions
         self.state = start_state  # Agent's current state (position, has_item)
         self.reset_state = start_state
+        self.loop1_data = {}
 
         self.default_policy = policy
         self.policy = policy  # Current policy in use
@@ -73,6 +74,12 @@ class Agent:
 
     def return_q_dicts(self):
         return self.Q_dicts
+
+    def store_loop1(self, idx, *args):
+        self.loop1_data[idx] = args
+
+    def get_loop1(self, idx):
+        return self.loop1_data.get(idx)
 
     def display_q_values(self, pd_string):
         if pd_string == '5':
