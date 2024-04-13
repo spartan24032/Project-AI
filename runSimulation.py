@@ -38,7 +38,11 @@ class SimulationWorker(QObject):
         self.mskip = mskip
         self.totalsteps = 0
     def print_excel(self):
-            excel_writer = pd.ExcelWriter('Q_EXP4_Simple_SEED_1_Alpha_0.3PRANDOM_500_PEXPLOIT_8500.xlsx', engine='xlsxwriter')
+            experiment_num = "4" # Specifies the experiment you're running
+            seed_num = "1" # 1 or 2 (not the actual seed value)
+            agent = self.agents[0] # Gets alpha, policy, override policy, and override steps of first agent
+            excel_filename = f"Q_EXP{experiment_num}_{'Complex' if self.complex_world2 else 'Simple'}_SEED_{seed_num}_Alpha_{agent.alpha}{f'_{agent.policy.__name__}'}_{agent.terminate_override_step if agent.terminate_override_step else self.totalsteps}{f'_{agent.override_policy.__name__}' if agent.override_policy else ''}{f'_{self.totalsteps - agent.terminate_override_step}' if agent.terminate_override_step else ''}.xlsx"
+            excel_writer = pd.ExcelWriter(excel_filename, engine='xlsxwriter')
 
             for num, agent in enumerate(self.agents):
                 for q_table in agent.Q_dicts.keys():

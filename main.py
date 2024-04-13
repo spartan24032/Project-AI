@@ -36,7 +36,7 @@ if __name__ == "__main__":
     a = env.actions
     agents = [
         # alpha = learning rate , gamma = discount factor
-        Agent(a, start_state=(1,1), policy = PRandom, alpha=0.3, gamma=0.5, override_policy=PExploit, override_max_step=500),
+        Agent(a, start_state=(1,1), policy=PRandom, alpha=0.3, gamma=0.5, override_policy=PExploit, override_max_step=500),
         Agent(a, start_state=(4,4), policy=PRandom, alpha=0.3, gamma=0.5, override_policy=PExploit, override_max_step=500),
         Agent(a, start_state=(0,0), policy=PRandom, alpha=0.3, gamma=0.5, override_policy=PExploit, override_max_step=500)
     ]
