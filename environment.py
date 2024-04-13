@@ -2,7 +2,7 @@
 import numpy as np
 
 class GridWorld:
-    def __init__(self, size, pickups=None, dropoffs=None, dropoffCapacity = 5, keyChangeEpisodes=[0,0], flipP=None, flipD=None):
+    def __init__(self, size, pickups=None, dropoffs=None, dropoffCapacity = 5, keyChangeEpisodes=None, flipP=None, flipD=None):
         self.size = size
         self.actions = ['N', 'E', 'S', 'W', 'pickup', 'dropoff']
         self.dropoffStorage = dropoffCapacity
@@ -45,27 +45,29 @@ class GridWorld:
             return '5'
 
     def reset(self, episode):
-        print(f"calling env reset. Episode {episode}")
-        print(f"override episode range is {self.keyChangeEpisodes}")
+        print(f"called reset, episode {episode}")
+        print(f"current key change episodes {self.keyChangeEpisodes}")
         """
         Resets the environment for a new episode. 
         This includes resetting pickup and dropoff locations + capacaties
         """
         self.noops = 0
         # Reset the grid
+        self.pickups = self.defaultpickups
+        self.dropoffs = self.defaultdropoffs
 
-
-        if episode >= self.keyChangeEpisodes[0] and episode <= self.keyChangeEpisodes[1]:
-            print("using override p/d")
-            # During the specified episodes, use the flipped configurations
-            if self.flipP is not None:
-                self.pickups = self.flipP
-            if self.flipD is not None:
-                self.dropoffs = self.flipD
-        else:
-            # Revert to original configurations if outside the specified range
-            self.pickups = self.defaultpickups
-            self.dropoffs = self.defaultdropoffs
+        if(self.keyChangeEpisodes is not None):
+            if (
+                any(start <= episode <= end for start, end in self.keyChangeEpisodes)
+                or
+                (self.keyChangeEpisodes == [(-2,-2)] and episode %2 == 0)
+            ):
+                print("using override p/d")
+                # During the specified episodes, use the flipped configurations
+                if self.flipP is not None:
+                    self.pickups = self.flipP
+                if self.flipD is not None:
+                    self.dropoffs = self.flipD
 
         self.grid = np.zeros((self.size, self.size), dtype=str)
         # Mark pickups and dropoffs on the grid

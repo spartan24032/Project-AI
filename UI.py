@@ -54,6 +54,7 @@ class SimulationControl(QMainWindow):
         self.OverrideDropoffCoords = []
         self.agentLabels = []
         self.episode_data = []
+        self.keyChangeEpisodes = []
         self.initUI()
         self.masterskip = False
         self.created = False
@@ -260,8 +261,20 @@ class SimulationControl(QMainWindow):
         episodeInputLayout.addWidget(QLabel("End Episode:"))
         episodeInputLayout.addWidget(self.endEpisodeInput)
 
+        addEpisodeRangeBtn = QPushButton("Add Episode Range", self)
+        addEpisodeRangeBtn.clicked.connect(self.addEpisodeRange)
+        episodeInputLayout.addWidget(addEpisodeRangeBtn)
+
         episodeInputLayout.addStretch()
+
+        self.overrideEveryOtherCheckbox = QCheckBox("Every Even Episode", self)
+        self.overrideEveryOtherCheckbox.toggled.connect(self.overrideEveryOther)
+        episodeInputLayout.addWidget(self.overrideEveryOtherCheckbox)
+
         self.pdOverrideLayout.addLayout(episodeInputLayout)
+
+        self.currentRangesLabel = QLabel("Current Ranges: None")
+        self.pdOverrideLayout.addWidget(self.currentRangesLabel)
 
         # Second Row: Pickup/Dropoff inputs
         self.OverridepickupDropoffLayout = QHBoxLayout()
@@ -283,8 +296,8 @@ class SimulationControl(QMainWindow):
         self.OverridepickupDropoffLayout.addStretch()
         self.pdOverrideLayout.addLayout(self.OverridepickupDropoffLayout)
 
-        self.addedOverridePickupDropoffDisplay = QLabel("Added Pickup/Dropoff Pairs: None")
-        self.OverridepickupDropoffLayout.addWidget(self.addedOverridePickupDropoffDisplay)
+        self.addedOverridePickupDropoffDisplay = QLabel("Override Pickup/Dropoff Pairs: None")
+        self.pdOverrideLayout.addWidget(self.addedOverridePickupDropoffDisplay)
 
         layout.addWidget(self.pdOverrideContainer)
 
@@ -676,9 +689,8 @@ class SimulationControl(QMainWindow):
         if self.OveridePickupCoords and self.OverrideDropoffCoords is not None:
             override_pickups = {self.parseCoordinateToTuple(coord): dropoffCapacity for coord in self.OveridePickupCoords}
             override_dropoffs = {self.parseCoordinateToTuple(coord): initialDropoffInventory for coord in self.OverrideDropoffCoords}
-            keychangeEpisodes = [int(self.startEpisodeInput.text()), int(self.endEpisodeInput.text())]
-            env =  GridWorld(size, pickups, dropoffs, dropoffCapacity, keychangeEpisodes, override_pickups, override_dropoffs)
-            print(f"created override pd env with {override_dropoffs} and {override_pickups} and {keychangeEpisodes}")
+            env = GridWorld(size, pickups, dropoffs, dropoffCapacity, self.keyChangeEpisodes, override_pickups, override_dropoffs)
+            # print(f"created override pd env with {override_dropoffs} and {override_pickups} and {keychangeEpisodes}")
         else:
             env = GridWorld(size, pickups, dropoffs, dropoffCapacity)
         # env params: size, pickups, dropoff, dropoffCapacity, keyChangeEpisodes, flipP, flipD
@@ -845,6 +857,49 @@ class SimulationControl(QMainWindow):
     def togglePDOverrideInputs(self):
         # Toggle the visibility of the P/D override inputs
         self.pdOverrideContainer.setVisible(not self.pdOverrideContainer.isVisible())
+
+    def addEpisodeRange(self):
+        start_episode = int(self.startEpisodeInput.text())
+        end_episode = int(self.endEpisodeInput.text())
+        self.keyChangeEpisodes.append((start_episode, end_episode))
+        # Optional: Update UI or display to reflect the change
+        print(f"Added episode range: {start_episode} to {end_episode}")
+
+    def addEpisodeRange(self):
+        if self.overrideEveryOtherCheckbox.isChecked():
+            self.overrideEveryOtherCheckbox.setChecked(False)
+            return
+
+        try:
+            start_episode = int(self.startEpisodeInput.text())
+            end_episode = int(self.endEpisodeInput.text())
+            if start_episode <= end_episode:
+                self.keyChangeEpisodes.append((start_episode, end_episode))
+                self.updateCurrentRangesDisplay()
+                self.startEpisodeInput.clear()
+                self.endEpisodeInput.clear()
+            else:
+                print("Error: Start episode must be less than or equal to end episode.")
+        except ValueError:
+            print("Error: Please enter valid integers for episodes.")
+
+    def updateCurrentRangesDisplay(self):
+        if self.keyChangeEpisodes == [(-2, -2)]:
+            ranges_text = "All even numbered episodes"
+        else:
+            ranges_text = ", ".join(f"{start}-{end}" for start, end in self.keyChangeEpisodes)
+        self.currentRangesLabel.setText(f"Current Ranges: {ranges_text if ranges_text else 'None'}")
+        self.currentRangesLabel.setStyleSheet("color: #ff7024")
+
+    def overrideEveryOther(self, checked):
+        if checked:
+            self.keyChangeEpisodes = [(-2, -2)]
+            self.updateCurrentRangesDisplay()
+            self.startEpisodeInput.clear()
+            self.endEpisodeInput.clear()
+        else:
+            self.keyChangeEpisodes.clear()
+            self.updateCurrentRangesDisplay()
 
 #########
 
