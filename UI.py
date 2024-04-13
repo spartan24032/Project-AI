@@ -16,6 +16,15 @@ from policies import PRandom, PExploit, PGreedy
 from runSimulation import SimulationWorker
 import random
 
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+
+class MplCanvas(FigureCanvas):
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = self.fig.add_subplot(111)
+        super(MplCanvas, self).__init__(self.fig)
+
 # Example preset data
 PRESET_AGENTS = [
     ("(0,2)", "PExploit", "Q-learning", "0.5", "0.3"),
@@ -41,7 +50,10 @@ class SimulationControl(QMainWindow):
         self.addedAgents = []
         self.pickupCoords = []
         self.dropoffCoords = []
+        self.OveridePickupCoords = []
+        self.OverrideDropoffCoords = []
         self.agentLabels = []
+        self.episode_data = []
         self.initUI()
         self.masterskip = False
         self.created = False
@@ -78,6 +90,8 @@ class SimulationControl(QMainWindow):
             self.onPauseClicked()
             if self.tabs.widget(index) == self.qTableTab:
                 self.populateComboboxes(self.tabagents)
+            if self.episode_data != []:
+                    self.plot_graph()
 
     def initWorldCreationTab(self):
         screen = QApplication.primaryScreen().size()
@@ -221,7 +235,60 @@ class SimulationControl(QMainWindow):
         # Area to display added pickup/dropoff pairs
         self.addedPickupDropoffDisplay = QLabel("Added Pickup/Dropoff Pairs: None")
         layout.addWidget(self.addedPickupDropoffDisplay)
-        #layout.addStretch(1)
+
+
+
+
+        self.togglePDOverridesBtn = QPushButton("Add P/D Override for Specific Episodes", self)
+        self.togglePDOverridesBtn.clicked.connect(self.togglePDOverrideInputs)
+        layout.addWidget(self.togglePDOverridesBtn)
+
+        # Container for P/D override inputs
+        self.pdOverrideContainer = QWidget(self)
+        self.pdOverrideLayout = QVBoxLayout(self.pdOverrideContainer)
+        self.pdOverrideContainer.setVisible(False)
+
+        # First Row: Episode range inputs
+        episodeInputLayout = QHBoxLayout()
+        self.startEpisodeInput = QLineEdit(self)
+        self.startEpisodeInput.setPlaceholderText("Start Episode")
+        episodeInputLayout.addWidget(QLabel("Start Episode:"))
+        episodeInputLayout.addWidget(self.startEpisodeInput)
+
+        self.endEpisodeInput = QLineEdit(self)
+        self.endEpisodeInput.setPlaceholderText("End Episode")
+        episodeInputLayout.addWidget(QLabel("End Episode:"))
+        episodeInputLayout.addWidget(self.endEpisodeInput)
+
+        episodeInputLayout.addStretch()
+        self.pdOverrideLayout.addLayout(episodeInputLayout)
+
+        # Second Row: Pickup/Dropoff inputs
+        self.OverridepickupDropoffLayout = QHBoxLayout()
+        self.OverridepickupInput = QLineEdit(self)
+        self.OverridepickupInput.setPlaceholderText("Pickup (x,y)")
+        self.OverridedropoffInput = QLineEdit(self)
+        self.OverridedropoffInput.setPlaceholderText("Dropoff (x,y)")
+
+        addOverridePickupDropoffBtn = QPushButton("Add Pickup/Dropoff", self)
+        addOverridePickupDropoffBtn.clicked.connect(self.addOverridePickupDropoff)
+
+        deleteOverridePickupDropoffBtn = QPushButton("Delete Pickup/Dropoff", self)
+        deleteOverridePickupDropoffBtn.clicked.connect(self.deleteLastOverridePickupDropoff)
+
+        self.OverridepickupDropoffLayout.addWidget(self.OverridepickupInput)
+        self.OverridepickupDropoffLayout.addWidget(self.OverridedropoffInput)
+        self.OverridepickupDropoffLayout.addWidget(addOverridePickupDropoffBtn)
+        self.OverridepickupDropoffLayout.addWidget(deleteOverridePickupDropoffBtn)
+        self.OverridepickupDropoffLayout.addStretch()
+        self.pdOverrideLayout.addLayout(self.OverridepickupDropoffLayout)
+
+        self.addedOverridePickupDropoffDisplay = QLabel("Added Pickup/Dropoff Pairs: None")
+        self.OverridepickupDropoffLayout.addWidget(self.addedOverridePickupDropoffDisplay)
+
+        layout.addWidget(self.pdOverrideContainer)
+
+
 
         layout.addItem(QSpacerItem(int(new_size/30), int(new_size/30)))
         self.previewWorldBtn = QPushButton("Preview World", self)
@@ -348,8 +415,10 @@ class SimulationControl(QMainWindow):
 
         self.graphsTab = QWidget()
         self.nestedTabs.addTab(self.graphsTab, "Graphs")
+
         self.builtQtable = False
         self.setupQTablesDisplayTab()
+        self.setupGraphsDisplayTab()
 
 ######################################################################
     def initWorldStateGrid(self, size, agents=[], pickups=[], dropoffs=[]):
@@ -526,6 +595,35 @@ class SimulationControl(QMainWindow):
             self.addedPickupDropoffDisplay.setText(f"Pickup/Dropoff Pairs:\n{pairsStr}")
             self.addedPickupDropoffDisplay.setStyleSheet("color: #293BFF")
 
+
+    def addOverridePickupDropoff(self):
+        OveridePickupCoords = self.OverridepickupInput.text()
+        OverrideDropoffCoords = self.OverridedropoffInput.text()
+
+        if OveridePickupCoords and OverrideDropoffCoords:
+            self.OveridePickupCoords.append(OveridePickupCoords)
+            self.OverrideDropoffCoords.append(OverrideDropoffCoords)
+            self.updateOverridePD()
+            self.OverridepickupInput.clear()
+            self.OverridedropoffInput.clear()
+
+    def deleteLastOverridePickupDropoff(self):
+        if self.OveridePickupCoords and self.OverrideDropoffCoords:
+            self.OveridePickupCoords.pop()
+            self.OverrideDropoffCoords.pop()
+            self.updateOverridePD()
+        else:
+            self.addedOverridePickupDropoffDisplay.setText("Override Pickup/Dropoff Pairs: None")
+
+    def updateOverridePD(self):
+        if not self.pickupCoords or not self.OverrideDropoffCoords:
+            self.addedOverridePickupDropoffDisplay.setText("Override Pickup/Dropoff Pairs: None")
+        else:
+            pairsStr = "\n".join([f"Pickup: {pickup}, Dropoff: {dropoff}"
+                                  for pickup, dropoff in zip(self.OveridePickupCoords, self.OverrideDropoffCoords)])
+            self.addedOverridePickupDropoffDisplay.setText(f"Override Pickup/Dropoff Pairs:\n{pairsStr}")
+            self.addedOverridePickupDropoffDisplay.setStyleSheet("color: #ff7024")
+
     isEpisodeBased = True
     def toggleSimulationMode(self):
         if self.isEpisodeBased:
@@ -575,7 +673,15 @@ class SimulationControl(QMainWindow):
         pickups = {self.parseCoordinateToTuple(coord): dropoffCapacity for coord in self.pickupCoords}
         dropoffs = {self.parseCoordinateToTuple(coord): initialDropoffInventory for coord in self.dropoffCoords}
 
-        env = GridWorld(size, pickups, dropoffs, dropoffCapacity)
+        if self.OveridePickupCoords and self.OverrideDropoffCoords is not None:
+            override_pickups = {self.parseCoordinateToTuple(coord): dropoffCapacity for coord in self.OveridePickupCoords}
+            override_dropoffs = {self.parseCoordinateToTuple(coord): initialDropoffInventory for coord in self.OverrideDropoffCoords}
+            keychangeEpisodes = [int(self.startEpisodeInput.text()), int(self.endEpisodeInput.text())]
+            env =  GridWorld(size, pickups, dropoffs, dropoffCapacity, keychangeEpisodes, override_pickups, override_dropoffs)
+            print(f"created override pd env with {override_dropoffs} and {override_pickups} and {keychangeEpisodes}")
+        else:
+            env = GridWorld(size, pickups, dropoffs, dropoffCapacity)
+        # env params: size, pickups, dropoff, dropoffCapacity, keyChangeEpisodes, flipP, flipD
 
         # Setup agents
         agentInstances = []
@@ -633,6 +739,7 @@ class SimulationControl(QMainWindow):
         self.simulationThread.finished.connect(self.simulationThread.deleteLater)
         self.simulationWorker.update_display.connect(self.updateDisplay)
         self.simulationWorker.update_qtable_display.connect(self.updateQValuesDisplay)
+        self.simulationWorker.episode_end.connect(self.episodeEndSignal)
 
         # Start the simulation thread
         self.simulationThread.start()
@@ -735,7 +842,56 @@ class SimulationControl(QMainWindow):
         self.updateAddedPickupDropoffDisplay()
         self.onPreviewWorldClicked()
 
+    def togglePDOverrideInputs(self):
+        # Toggle the visibility of the P/D override inputs
+        self.pdOverrideContainer.setVisible(not self.pdOverrideContainer.isVisible())
+
 #########
+
+    def setupGraphsDisplayTab(self):
+        layout = QVBoxLayout()
+        self.canvas = MplCanvas(self, width=5, height=4, dpi=100)
+        layout.addWidget(self.canvas)
+
+        # Checkboxes for choosing datasets
+        self.cb_steps = QCheckBox('Show Total Rewards')
+        self.cb_steps.setChecked(True)
+        self.cb_steps.stateChanged.connect(self.plot_graph)
+        layout.addWidget(self.cb_steps)
+
+        self.cb_rewards = QCheckBox('Show Total Steps')
+        self.cb_rewards.setChecked(True)
+        self.cb_rewards.stateChanged.connect(self.plot_graph)
+        layout.addWidget(self.cb_rewards)
+
+        self.cb_collisions = QCheckBox('Show Total Blockages')
+        self.cb_collisions.setChecked(True)
+        self.cb_collisions.stateChanged.connect(self.plot_graph)
+        layout.addWidget(self.cb_collisions)
+
+        # Apply the layout to the graphsTab
+        self.graphsTab.setLayout(layout)
+
+    def plot_graph(self):
+        self.canvas.axes.clear()
+
+        episode_data = self.episode_data
+
+        if self.cb_steps.isChecked():
+            steps = [data[0] for data in episode_data]
+            self.canvas.axes.plot(steps, label='Total Rewards')
+
+        if self.cb_rewards.isChecked():
+            rewards = [data[1] for data in episode_data]
+            self.canvas.axes.plot(rewards, label='Total Steps')
+
+        if self.cb_collisions.isChecked():
+            collisions = [data[2] for data in episode_data]
+            self.canvas.axes.plot(collisions, label='Total Blockages')
+
+        self.canvas.axes.legend()
+        self.canvas.draw()
+
     def setupQTablesDisplayTab(self):
         layout = QVBoxLayout()
 
@@ -846,6 +1002,10 @@ class SimulationControl(QMainWindow):
                         row += 1
 
         self.qTableWidget.resizeColumnsToContents()
+
+    def episodeEndSignal(self, total_steps, total_reward, total_collisions):
+        episodelist = [total_steps, total_reward, total_collisions]
+        self.episode_data.append(episodelist)
 
     def populateComboboxes(self, agents):
         if not self.builtQtable:

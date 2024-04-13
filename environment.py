@@ -2,7 +2,7 @@
 import numpy as np
 
 class GridWorld:
-    def __init__(self, size, pickups=None, dropoffs=None, dropoffCapacity = 5):
+    def __init__(self, size, pickups=None, dropoffs=None, dropoffCapacity = 5, keyChangeEpisodes=[0,0], flipP=None, flipD=None):
         self.size = size
         self.actions = ['N', 'E', 'S', 'W', 'pickup', 'dropoff']
         self.dropoffStorage = dropoffCapacity
@@ -12,14 +12,25 @@ class GridWorld:
             dropoffs = {(4, 4): 0}
         self.pickups = pickups
         self.dropoffs = dropoffs
+        self.defaultpickups = pickups
+        self.defaultdropoffs = dropoffs
+        self.flipP = flipP
+        self.flipD = flipD
+        self.keyChangeEpisodes = keyChangeEpisodes
         self.used_dropoffs = set()
         self.grid = np.zeros((self.size, self.size), dtype=str)
-        self.reset()
+        #self.reset(int)
+        self.noops = 0
 
     def get_actions(self):
         return self.actions
     def get_size(self):
         return int(self.size)
+    def get_noops(self):
+        print(f"no ops: {self.noops}")
+        return int(self.noops)
+    def get_actions(self):
+        return self.actions
 
     def dropoffs_complete(self):
         return all(capacity == self.dropoffStorage for capacity in self.dropoffs.values())
@@ -33,12 +44,29 @@ class GridWorld:
         else:
             return '5'
 
-    def reset(self):
+    def reset(self, episode):
+        print(f"calling env reset. Episode {episode}")
+        print(f"override episode range is {self.keyChangeEpisodes}")
         """
         Resets the environment for a new episode. 
         This includes resetting pickup and dropoff locations + capacaties
         """
+        self.noops = 0
         # Reset the grid
+
+
+        if episode >= self.keyChangeEpisodes[0] and episode <= self.keyChangeEpisodes[1]:
+            print("using override p/d")
+            # During the specified episodes, use the flipped configurations
+            if self.flipP is not None:
+                self.pickups = self.flipP
+            if self.flipD is not None:
+                self.dropoffs = self.flipD
+        else:
+            # Revert to original configurations if outside the specified range
+            self.pickups = self.defaultpickups
+            self.dropoffs = self.defaultdropoffs
+
         self.grid = np.zeros((self.size, self.size), dtype=str)
         # Mark pickups and dropoffs on the grid
         self.used_dropoffs.clear()
@@ -103,6 +131,7 @@ class GridWorld:
 
         if actions == []: # agent is stuck in a corner, cannot move.
             actions.append('no op')
+            self.noops += 1
         return actions
 
     def render(self, agents):

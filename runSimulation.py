@@ -9,6 +9,8 @@ class SimulationWorker(QObject):
     update_display = pyqtSignal(object, object, int, int, int, bool, int)
     # idx, agent_buffer, valid_actions_current, pd_string, action, reward
     update_qtable_display = pyqtSignal(int, object, list, str, str, int)
+    # total_steps, total_reward, total_collisions
+    episode_end = pyqtSignal(int, int, int)
     requestPause = pyqtSignal()
     requestPlay = pyqtSignal(int)
     requestNext = pyqtSignal()
@@ -58,10 +60,10 @@ class SimulationWorker(QObject):
                 episode = self.core_logic(episode)
 
         self.finished.emit()
-
     def core_logic(self, episode):
         episode += 1
-        self.env.reset()
+        self.blockage_count = 0
+        self.env.reset(episode)
         pd_string = self.env.generate_pd_string(self.complex_world2)
         for agent in self.agents:
             agent.reset(pd_string)
@@ -125,6 +127,8 @@ class SimulationWorker(QObject):
                                       new_has_item, pd_string, next_action)
 
                 actions_taken.append((idx, action, reward, new_state, valid_actions_current))
+                # check_for_blockages(self, agent, valid_actions, pd_string)
+                self.check_for_blockages(agent, valid_actions_current, pd_string)
 
             if not self.mskip:
                 if self.skipTo is not None:
@@ -141,5 +145,31 @@ class SimulationWorker(QObject):
                             break
                 if self.autoPlay:
                     time.sleep((101 - (self.autoPlay_speed + 30) * 2) / 100)
-
+        self.episode_end.emit(total_reward, step, self.blockage_count)
         return episode
+
+    def check_for_blockages(self, agent, valid_actions, pd_string):
+        highest_action_str = " "
+        all_actions = ['N', 'S', 'E', 'W']
+        #print("checking for blocks")
+        q_dicts = agent.return_q_dicts()
+        current_state, has_item = agent.get_state()
+        # Retrieve the Q-values for the current state
+        highest_valued_action = -100
+        for action in all_actions:
+            action_q_value = q_dicts[pd_string].get((current_state, has_item, action))
+            if not action_q_value:
+                continue
+            highest_valued_action = max( action_q_value, -100)
+            if action_q_value == highest_valued_action:
+                highest_action_str = action
+        #print(highest_action_str)
+        if highest_valued_action < -90:
+            return
+
+        #print(f"highest valued action {highest_valued_action}, {highest_action_str}")
+        #print(f"valid actions: {valid_actions}")
+        # Check if the highest valued action is in the valid actions
+        if highest_action_str not in valid_actions:
+            self.blockage_count += 1
+            #print("blockage found")
