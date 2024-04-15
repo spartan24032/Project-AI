@@ -1,6 +1,6 @@
 # Project AI
 
-This project is aimed at demonstrating reinforcement learning. 
+This project is aimed at demonstrating reinforcement learning.
 
 ## Steps to run the project
 
@@ -34,6 +34,12 @@ This project is aimed at demonstrating reinforcement learning.
 
     ```bash
     pip install -r requirements.txt
+    ```
+
+    If you prefer, you can copy and paste the following command to install the requirements:
+    
+    ```bash
+    pip install xlswriter pandas PyQt5 matplotlib numpy
     ```
 
 ## Requirements
