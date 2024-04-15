@@ -42,9 +42,19 @@ This project is aimed at demonstrating reinforcement learning.
     pip install xlswriter pandas PyQt5 matplotlib numpy
     ```
 
+6. **Run the program.**
+
+    To run the program, execute the `UI.py` file. This file controls the simulation and allows interaction with Q tables and graphs. You can run it using the following command:
+
+    ```bash
+    python UI.py
+    ```
+
+    This will start the program and you can then explore the reinforcement learning demonstration provided by Project AI.
+
 ## Requirements
 
-- [xlswriter](https://pypi.org/project/XlsxWriter/)
+- [xlswriter](https://pypi.org/project/XlsxWriter/) 
 - [pandas](https://pandas.pydata.org/)
 - [PyQt5](https://pypi.org/project/PyQt5/)
 - [matplotlib](https://matplotlib.org/)
