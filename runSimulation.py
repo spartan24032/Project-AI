@@ -59,7 +59,7 @@ class SimulationWorker(QObject):
             while self.totalsteps < self.r:
                 episode = self.core_logic(episode)
 
-        self.finished.emit()
+        time.sleep(100000)
     def core_logic(self, episode):
         episode += 1
         self.blockage_count = 0
@@ -113,7 +113,7 @@ class SimulationWorker(QObject):
                 if verbose:
                     print(f"\033[91mAgent {idx}\033[0m {old_state}, Valid Actions: {valid_actions_current}")
                     self.agents[idx].display_q_values(pd_string)
-                reward = self.env.step(agent, action, self.agents)  # Perform the action, moving to the new state
+                reward = self.env.step(agent, action, self.agents, idx)  # Perform the action, moving to the new state
                 pd_string = self.env.generate_pd_string(self.additional_state, agent.get_state(), self.agents)
                 step += 1
                 self.totalsteps += 1

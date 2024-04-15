@@ -22,6 +22,8 @@ class GridWorld:
         #self.reset(int)
         self.noops = 0
         self.proximityPunishment = proximityPunishment
+        self.spaceDominance = []
+
 
     def get_actions(self):
         return self.actions
@@ -35,6 +37,28 @@ class GridWorld:
 
     def dropoffs_complete(self):
         return all(capacity == self.dropoffStorage for capacity in self.dropoffs.values())
+
+    def update_influence(self, x, y, agent_id):
+        """Increment influence for an agent at a specific grid cell."""
+        self.spaceDominance[x][y][agent_id] += 1
+
+    def dominant_agent(self, x, y):
+        if x >= len(self.spaceDominance) or y >= len(self.spaceDominance[x]):
+            return None
+        cell = self.spaceDominance[x][y]
+        if not cell:
+            return None
+        # Get the agent with the maximum influence and the total influence
+        max_agent_id = max(cell, key=cell.get)
+        max_influence = cell[max_agent_id]
+        total_influence = sum(cell.values())
+
+        # Calculate the influence of the second highest to compare
+        second_max_influence = max(v for k, v in cell.items() if k != max_agent_id)
+
+        # Check if the maximum influence is significantly greater than the second max
+        if max_influence > (second_max_influence + 0.20 * second_max_influence):
+            return max_agent_id
 
     def generate_pd_string(self, usage=0, current_position=None, agents=None, flip=False):
 
@@ -114,13 +138,15 @@ class GridWorld:
             self.grid[dropoff] = 'D'
             self.dropoffs[dropoff] = 0 # empty dropoffs
 
-    def step(self, agent, action, agents):
+    def step(self, agent, action, agents, idx):
         """
         Applies an action taken by an agent and updates environment state
 
         Returns:
         - reward: The reward resulting from the action.
         """
+        if self.spaceDominance == []:
+            self.spaceDominance = [[{i: 0 for i in range(len(agents))} for _ in range(self.size)] for _ in range(self.size)]
         current_state, has_item = agent.get_state()
         x, y = current_state
         reward = -1  # Default action cost for moving
@@ -163,6 +189,7 @@ class GridWorld:
         # Update agent's position if the action was a move
         if action in ['N', 'S', 'E', 'W']:
             agent.update_state(new_state, has_item)
+        self.update_influence(x, y, idx)
 
         return reward
 

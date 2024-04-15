@@ -59,6 +59,7 @@ class SimulationControl(QMainWindow):
         self.masterskip = False
         self.fallback_set = False
         self.created = False
+        self.heatmap_enabled = False
 
     def initUI(self):
         self.setWindowTitle('Simulation Control')
@@ -339,7 +340,7 @@ class SimulationControl(QMainWindow):
         new_size = min(screen.width() * 0.5, screen.height() * 0.5)
 
         layout = QGridLayout()
-        layout.setRowStretch(5, 1)
+        layout.setRowStretch(6, 1)
         self.episodeLabel = QLabel("Episode: 0")
         layout.addWidget(self.episodeLabel, 0, 0, 1, -1)
         self.episodeLabel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
@@ -362,6 +363,7 @@ class SimulationControl(QMainWindow):
         self.qValuesScrollArea = QScrollArea(self.simulationControlTab)
         self.qValuesScrollArea.setWidgetResizable(True)
         self.qValuesScrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.qValuesScrollArea.setMaximumWidth(int(screen.width() * 0.2))
 
         self.qValuesContainer = QWidget()
         self.qValuesScrollArea.setWidget(self.qValuesContainer)
@@ -415,6 +417,10 @@ class SimulationControl(QMainWindow):
         layout.addWidget(QLabel("Speed:"), 3, 0)
         layout.addWidget(self.speedSlider, 3, 1, 1, 2)
         layout.addWidget(self.speedValueLabel, 3, 3)  # Display the current speed value next to the slider
+
+        toggle_button = QPushButton("Toggle Heatmap", self)
+        toggle_button.clicked.connect(self.toggle_heatmap)
+        layout.addWidget(toggle_button, 5, 0)
 
         self.simulationControlTab.setLayout(layout)
         self.nextBtn.setEnabled(False)
@@ -483,14 +489,31 @@ class SimulationControl(QMainWindow):
                 base_content = ' '
                 cell_style = "QLabel { font-weight: bold; border: 1px solid black; "
                 cell_style += "background-color: white; color: black; "
+                dominant = self.tabenv.dominant_agent(row, col)
+                if dominant is not None and self.heatmap_enabled:
+                    blended_color = self.blend_colors(self.hex_to_rgb('#ffffff'),
+                                                      self.hex_to_rgb(self.agent_colors[dominant]))
+                    cell_style += f"background-color: {self.rgb_to_hex(blended_color)}"
+
+
+                """ if dominant is not None:
+                    # Set cell background to the dominant agent's color
+                    agent_color = self.agent_colors[dominant]
+                    base_content = f"A{dominant}" """
 
                 # Check for pickups and dropoffs
                 if (row, col) in pickups:
                     base_content = f'P{pickups[(row, col)]}'
                     cell_style += "background-color: #ff6b6b; color: white; "  # Light blue background
+                    if dominant is not None and self.heatmap_enabled:
+                        blended_color = self.blend_colors(self.hex_to_rgb('#ff6b6b'), self.hex_to_rgb(self.agent_colors[dominant]))
+                        cell_style += f"background-color: {self.rgb_to_hex(blended_color)}"
                 elif (row, col) in dropoffs:
                     base_content = f'D{dropoffs[(row, col)]}'
                     cell_style += "background-color: #36bf34; color: white; "  # Green background
+                    if dominant is not None and self.heatmap_enabled:
+                        blended_color = self.blend_colors(self.hex_to_rgb('#36bf34'), self.hex_to_rgb(self.agent_colors[dominant]))
+                        cell_style += f"background-color: {self.rgb_to_hex(blended_color)}"
 
                 # Overlay agents
                 for idx, agent in enumerate(agents):
@@ -504,6 +527,10 @@ class SimulationControl(QMainWindow):
                             base_content = f"{agent_mark}{agent_id}"
                         agent_color = self.agent_colors[idx]  # Get agent-specific color
                         cell_style += f"background-color: {agent_color}; color: white;"
+                        if dominant is not None and self.heatmap_enabled:
+                            blended_color = self.blend_colors(self.hex_to_rgb(agent_color),
+                                                              self.hex_to_rgb(self.agent_colors[dominant]))
+                            cell_style += f"background-color: {self.rgb_to_hex(blended_color)}"
                         break
 
                 cell_style += "}"
@@ -562,7 +589,23 @@ class SimulationControl(QMainWindow):
                 self.agentLabels.append(label)
         self.agentLabels[idx].setText(text)
 
+    def toggle_heatmap(self):
+        """Toggle the heatmap view on or off."""
+        self.heatmap_enabled = not self.heatmap_enabled
+        #self.updateDisplay()
 
+    def hex_to_rgb(self, hex_color):
+        """Convert a hex color to an RGB tuple."""
+        hex_color = hex_color.lstrip('#')
+        return tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+
+    def rgb_to_hex(self, rgb_color):
+        """Convert an RGB tuple back to a hex string."""
+        return '#{:02x}{:02x}{:02x}'.format(*rgb_color)
+
+    def blend_colors(self, color1, color2):
+        """Blends two RGB colors together."""
+        return tuple((c1 + c2) // 2 for c1, c2 in zip(color1, color2))
 
     def onNextClicked(self):
         if self.simulationWorker:
