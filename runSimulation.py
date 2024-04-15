@@ -104,7 +104,7 @@ class SimulationWorker(QObject):
                     print(f"\nStep {step + 1}")
                     self.env.render(self.agents)
                     print(f"All dropoffs complete.\nTotal Reward for Episode {episode + 1}: {total_reward}\n")
-                pd_string = self.env.generate_pd_string(self.additional_state, agent.get_state(), self.agents)
+                pd_string = self.env.generate_pd_string(self.additional_state, agent.get_state(), self.agents, agent_id=idx)
                 old_state, old_has_item = agent.get_state()
                 # Get valid actions for the CURRENT state, before action is chosen
                 valid_actions_current = self.env.valid_actions(agent.get_state(), self.agents)
@@ -114,7 +114,7 @@ class SimulationWorker(QObject):
                     print(f"\033[91mAgent {idx}\033[0m {old_state}, Valid Actions: {valid_actions_current}")
                     self.agents[idx].display_q_values(pd_string)
                 reward = self.env.step(agent, action, self.agents, idx)  # Perform the action, moving to the new state
-                pd_string = self.env.generate_pd_string(self.additional_state, agent.get_state(), self.agents)
+                pd_string = self.env.generate_pd_string(self.additional_state, agent.get_state(), self.agents, agent_id=idx)
                 step += 1
                 self.totalsteps += 1
                 total_reward += reward
@@ -130,7 +130,7 @@ class SimulationWorker(QObject):
                 new_state, new_has_item = agent.get_state()  # This is effectively 'next_state' for Q-value update
                 packed_state = new_state, new_has_item
                 valid_actions_next = self.env.valid_actions(agent.get_state(), self.agents)
-                new_pd_string = self.env.generate_pd_string(self.additional_state, packed_state, self.agents, flip=True)
+                new_pd_string = self.env.generate_pd_string(self.additional_state, packed_state, self.agents, agent_id=idx, flip=True)
                 # next_action is only for SARSA as it needs the future action based on policy
                 next_action = agent.choose_action(valid_actions_next, new_pd_string, step, episode, self.episode_based)
                 # Update Q-values using 'old_state' as current and 'new_state' as next

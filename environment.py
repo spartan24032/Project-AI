@@ -2,7 +2,7 @@
 import numpy as np
 
 class GridWorld:
-    def __init__(self, size, pickups=None, dropoffs=None, dropoffCapacity = 5, proximityPunishment=False, keyChangeEpisodes=None, flipP=None, flipD=None):
+    def __init__(self, size, pickups=None, dropoffs=None, dropoffCapacity = 5, proximityPunishment=False, dominantPunishment=False, keyChangeEpisodes=None, flipP=None, flipD=None):
         self.size = size
         self.actions = ['N', 'E', 'S', 'W', 'pickup', 'dropoff']
         self.dropoffStorage = dropoffCapacity
@@ -22,6 +22,7 @@ class GridWorld:
         #self.reset(int)
         self.noops = 0
         self.proximityPunishment = proximityPunishment
+        self.dominantPunishment = dominantPunishment
         self.spaceDominance = []
 
 
@@ -57,20 +58,20 @@ class GridWorld:
         second_max_influence = max(v for k, v in cell.items() if k != max_agent_id)
 
         # Check if the maximum influence is significantly greater than the second max
-        if max_influence > (second_max_influence + 0.20 * second_max_influence):
+        if max_influence > (second_max_influence + 0.30 * second_max_influence):
             return max_agent_id
 
-    def generate_pd_string(self, usage=0, current_position=None, agents=None, flip=False):
+    def generate_pd_string(self, usage=0, current_position=None, agents=None, flip=False, agent_id=-1):
 
         generated_string = ""
         if usage == 0:
             return '5'
-        if usage == 1 or usage == 3: # complex_world2 (pd_strings)
+        if usage in [1, 3, 5, 7]: # complex_world2 (pd_strings)
             # Generates binary string-- 1 = available pickup/dropoff, 0 = unavailable
             pickups_str = ''.join('1' if capacity > 0 else '0' for capacity in self.pickups.values())
             dropoffs_str = ''.join('1' if count < self.dropoffStorage else '0' for count in self.dropoffs.values())
             generated_string += pickups_str + dropoffs_str
-        if usage == 2 or usage == 3: # 8-state proximity checking
+        if usage in [2, 3, 6, 7]: # 8-state proximity checking
             if current_position == None:
                 generated_string += 'N0 S0 E0 W0'
             else:
@@ -102,6 +103,19 @@ class GridWorld:
                     proximity_str += f"{direction}{found_agent} "
 
                 generated_string += proximity_str.strip()
+        if usage in [4, 5, 6, 7]: # Pheromone
+            if current_position == None or agent_id == -1:
+                generated_string += '0'
+            else:
+                state, has_item = current_position
+                x, y = state
+                dominant_agent = self.dominant_agent(x, y)
+                print(f"agent_id: '{agent_id}', dominant_agent: '{dominant_agent}'")
+                if dominant_agent is not None and dominant_agent != agent_id:
+                    generated_string += '1'
+                else:
+                    generated_string += '0'  # Space is non-dominated
+                print(f"dominant agent is not None and dominant_agent != agent_id: {generated_string}")
 
         return generated_string
 
@@ -184,7 +198,11 @@ class GridWorld:
             ]
             for pos in adjacent_positions:
                 if pos in occupied_positions:
-                    reward -= 1  # Apply penalty for being adjacent to another agent
+                    reward += -1  # Apply penalty for being adjacent to another agent
+        if self.dominantPunishment:
+            dominant_agent = self.dominant_agent(x, y)
+            if dominant_agent is not None and dominant_agent != idx:
+                reward += -1
 
         # Update agent's position if the action was a move
         if action in ['N', 'S', 'E', 'W']:

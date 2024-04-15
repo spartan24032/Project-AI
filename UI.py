@@ -122,8 +122,31 @@ class SimulationControl(QMainWindow):
         self.proximityWorldCheck = QCheckBox("Use 8-state proximity sensing memory space", self)
         layout.addWidget(self.proximityWorldCheck)
 
-        self.proximityPunishCheck = QCheckBox("Punish agents if touching another agent", self)
-        layout.addWidget(self.proximityPunishCheck)
+        self.pheremoneCheckLayout = QHBoxLayout()
+
+        # Checkbox without the label text
+        self.pheromoneCheck = QCheckBox("Use pheromone-like sensing memory space", self)
+        self.pheremoneCheckLayout.addWidget(self.pheromoneCheck)
+
+        # Label with clickable link
+        self.infoLabel = QLabel("<a href='more-info'>Learn More</a>")
+        self.infoLabel.setOpenExternalLinks(False)  # Prevent opening links externally
+        self.infoLabel.linkActivated.connect(self.onMoreInfo)
+        self.infoLabel.setTextInteractionFlags(Qt.LinksAccessibleByMouse)
+        self.pheremoneCheckLayout.addWidget(self.infoLabel)
+
+        self.pheremoneCheckLayout.addStretch()
+        layout.addLayout(self.pheremoneCheckLayout)
+
+        self.PunishmentCheckLayout = QHBoxLayout()
+
+        self.proximityPunishCheck = QCheckBox("Punish agents if touching another agent    ", self)
+        self.PunishmentCheckLayout.addWidget(self.proximityPunishCheck)
+        self.dominantCheck = QCheckBox("Punish agents entering another agent's dominant zone", self)
+        self.PunishmentCheckLayout.addWidget(self.dominantCheck)
+
+        self.PunishmentCheckLayout.addStretch()
+        layout.addLayout(self.PunishmentCheckLayout)
 
         worldSizeLayout = QHBoxLayout()
         worldSizeLabel = QLabel("World Size:")
@@ -334,6 +357,18 @@ class SimulationControl(QMainWindow):
 
         self.scrollArea.setWidgetResizable(True)  # Allows the scroll area to adapt to the size of its content
         self.scrollArea.setWidget(worldCreationContent)
+
+    def onMoreInfo(self):
+        """Show a message box with more information."""
+        msg = QMessageBox()
+        msg.setText("Every time an agent moves, it leaves a small marker on the square it just occupied. \nWhen an agent's markers "
+                    "total to at least 30% more than the other agents, that agent dominates this square. \nThis is based off of how "
+                    "ants leave 'pheremone trails' in our world. \nAgents can now dynamically 'dominate' sections of the world."
+                    " Clicking 'toggle heatmap' on the next screen will allow you to see this. This check box will enable agents"
+                    " to know if they are in a square that is dominated by another agent.")
+        msg.setWindowTitle("! Pheromone Trail Information !")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
 ######
     def initSimulationControlTab(self):
         screen = QApplication.primaryScreen().size()
@@ -776,14 +811,15 @@ class SimulationControl(QMainWindow):
         dropoffs = {self.parseCoordinateToTuple(coord): initialDropoffInventory for coord in self.dropoffCoords}
 
         proximityPunishment = self.proximityPunishCheck.isChecked()
+        dominancePunishment = self.dominantCheck.isChecked()
 
         if self.OveridePickupCoords and self.OverrideDropoffCoords is not None:
             override_pickups = {self.parseCoordinateToTuple(coord): dropoffCapacity for coord in self.OveridePickupCoords}
             override_dropoffs = {self.parseCoordinateToTuple(coord): initialDropoffInventory for coord in self.OverrideDropoffCoords}
-            env = GridWorld(size, pickups, dropoffs, dropoffCapacity,proximityPunishment, self.keyChangeEpisodes, override_pickups, override_dropoffs)
+            env = GridWorld(size, pickups, dropoffs, dropoffCapacity,proximityPunishment, dominancePunishment, self.keyChangeEpisodes, override_pickups, override_dropoffs)
             # print(f"created override pd env with {override_dropoffs} and {override_pickups} and {keychangeEpisodes}")
         else:
-            env = GridWorld(size, pickups, dropoffs, dropoffCapacity, proximityPunishment)
+            env = GridWorld(size, pickups, dropoffs, dropoffCapacity, proximityPunishment, dominancePunishment)
         # env params: size, pickups, dropoff, dropoffCapacity, keyChangeEpisodes, flipP, flipD
 
         # Setup agents
@@ -822,11 +858,13 @@ class SimulationControl(QMainWindow):
                 override_max_step=termination_step
             )
             agentInstances.append(agent)
-        complex_world2 = 0 # 0 = nothing, 1 = state2, 2= proximity, 3=both
+        complex_world2 = 0
         if self.complexWorldCheck.isChecked():
             complex_world2 += 1
         if self.proximityWorldCheck.isChecked():
             complex_world2 += 2
+        if self.pheromoneCheck.isChecked():
+            complex_world2 += 4
 
         episode_based = self.isEpisodeBased
         r = int(self.episodesOrStepsInput.text())
