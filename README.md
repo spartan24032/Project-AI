@@ -1,6 +1,6 @@
 # Project AI
 
-This project is aimed at [provide brief description of the project].
+This project is aimed at demonstrating reinforcement learning. 
 
 ## Steps to run the project
 
